@@ -328,11 +328,13 @@ async function startAnalysis() {
 
         Chart.defaults.color = '#ccc';
         if(chartGold) chartGold.destroy();
-        chartGold = new Chart(document.getElementById('goldChart'), { type: 'pie', data: { labels: ['Invested Gold', 'Remaining Gold'], datasets: [{ data: [spent, rem], backgroundColor: ['#2ecc71', '#e74c3c'], borderWidth: 0 }] }, options: { plugins: { title: { display: true, text: 'Gold Progress' } } } });
+        chartGold = new Chart(document.getElementById('goldChart'), { type: 'pie', data: { labels: ['Invested Gold', 'Remaining Gold'], datasets: [{ data: [spent, rem], backgroundColor: ['#2ecc71', '#e74c3c'], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { title: { display: true, text: 'Gold Progress' } } } });
+        
         if(chartCards) chartCards.destroy();
-        chartCards = new Chart(document.getElementById('cardsChart'), { type: 'doughnut', data: { labels: ['Collected', 'Missing Common', 'Missing Rare', 'Missing Epic', 'Missing Leg.', 'Missing Champ.'], datasets: [{ data: [cardCollTotal, missingByRarity.common, missingByRarity.rare, missingByRarity.epic, missingByRarity.legendary, missingByRarity.champion], backgroundColor: ['#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#00cec9', '#f1c40f'], borderWidth: 0 }] }, options: { plugins: { title: { display: true, text: 'Card Collection Spectrum' } }, cutout: '50%' } });
+        chartCards = new Chart(document.getElementById('cardsChart'), { type: 'doughnut', data: { labels: ['Collected', 'Missing Common', 'Missing Rare', 'Missing Epic', 'Missing Leg.', 'Missing Champ.'], datasets: [{ data: [cardCollTotal, missingByRarity.common, missingByRarity.rare, missingByRarity.epic, missingByRarity.legendary, missingByRarity.champion], backgroundColor: ['#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#00cec9', '#f1c40f'], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { title: { display: true, text: 'Card Collection Spectrum' } }, cutout: '50%' } });
+        
         if(chartXp) chartXp.destroy();
-        chartXp = new Chart(document.getElementById('xpChart'), { type: 'doughnut', data: { labels: ['Earned XP', 'Remaining XP'], datasets: [{ data: [playerTotalXp, totalXpToMax], backgroundColor: ['#8e44ad', '#ecf0f1'], borderWidth: 0 }] }, options: { plugins: { title: { display: true, text: "King's Journey XP" } }, cutout: '50%' } });
+        chartXp = new Chart(document.getElementById('xpChart'), { type: 'doughnut', data: { labels: ['Earned XP', 'Remaining XP'], datasets: [{ data: [playerTotalXp, totalXpToMax], backgroundColor: ['#8e44ad', '#ecf0f1'], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { title: { display: true, text: "King's Journey XP" } }, cutout: '50%' } });
 
         renderMainTable();
         statusMsg.innerText = "✅ Analysis Complete!";
@@ -444,4 +446,5 @@ function renderMainTable() {
     });
     tableHTML += `</tbody>`;
     document.getElementById("mainDataTable").innerHTML = tableHTML;
+
 }
