@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CR Tracker Pro</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>👑 Clash Royale Tracker Pro</h1>
+        
+        <div class="search-box">
+            <input type="text" id="playerTag" placeholder="Enter Player Tag (e.g. 2RG9P9Y)" list="tagHistory">
+            <datalist id="tagHistory"></datalist>
+            <button onclick="startAnalysis()">Analyze</button>
+        </div>
+        
+        <div id="statusMessage" class="status-msg"></div>
+
+        <div id="dashboard" class="hidden">
+            <h2 id="playerGreeting" style="text-align: center; color: #f1c40f; margin-bottom: 20px;"></h2>
+            
+            <div class="tab-container">
+                <button class="tab-btn active" onclick="openTab('overview')">📊 Overview</button>
+                <button class="tab-btn" onclick="openTab('mainTable')">🗂️ Card Database</button>
+            </div>
+
+            <div id="overview" class="tab-content active">
+                <div class="stats-grid">
+                    <div class="info-box" id="legacyData"></div>
+                    <div class="info-box" id="playerBox"></div>
+                    <div class="info-box" id="financialBox"></div>
+                    <div class="info-box" id="collectionBox"></div>
+                </div>
+
+                <div class="stats-grid" style="margin-top: 20px;">
+                    <div class="info-box chart-container"><canvas id="goldChart"></canvas></div>
+                    <div class="info-box chart-container"><canvas id="cardsChart"></canvas></div>
+                    <div class="info-box chart-container"><canvas id="xpChart"></canvas></div>
+                </div>
+
+                <div class="stats-grid" style="margin-top: 20px; grid-template-columns: 1fr;">
+                    <div class="info-box" id="breakdownData"></div>
+                </div>
+
+                <h2 style="margin-top: 30px; text-align: center; border-bottom: 2px solid #444; padding-bottom: 10px;">🧠 Smart Strategy Hub</h2>
+                
+                <div class="stats-grid" style="margin-top: 20px; grid-template-columns: 1fr;">
+                    <div class="info-box">
+                        <h3 style="color:#e67e22; text-align:center; margin-bottom:10px;">🚀 MASS-UPGRADE PLAN</h3>
+                        <div id="strategyData"></div>
+                        <div style="background:#111; padding:10px; border-radius:5px; margin-top:10px;">
+                            <strong>Optimal Cards to Upgrade:</strong> <span id="ladderPlanText" class="green-text"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid" style="margin-top: 20px;">
+                    <div class="info-box">
+                        <h3 style="color:#9b59b6; text-align:center; margin-bottom:10px;">⚡ INSTANT XP PLAN</h3>
+                        <div style="background:#111; padding:10px; border-radius:5px; text-align:center;">
+                            <span id="instantPlanText" class="gold-text" style="font-weight:bold;"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid" style="margin-top: 20px;">
+                    <div class="info-box" id="advisorData"></div>
+                    <div class="info-box" id="topUpgradesData"></div>
+                </div>
+            </div>
+
+            <div id="mainTable" class="tab-content">
+                <div class="filter-container">
+                    <button class="filter-btn active" onclick="filterCards('all')">All Cards</button>
+                    <button class="filter-btn" onclick="filterCards('tower')">Towers</button>
+                    <button class="filter-btn" style="color:#f1c40f; border-color:#f1c40f;" onclick="filterCards('champion')">Champions</button>
+                    <button class="filter-btn" style="color:#00cec9; border-color:#00cec9;" onclick="filterCards('legendary')">Legendary</button>
+                    <button class="filter-btn" style="color:#9b59b6; border-color:#9b59b6;" onclick="filterCards('epic')">Epic</button>
+                    <button class="filter-btn" style="color:#e67e22; border-color:#e67e22;" onclick="filterCards('rare')">Rare</button>
+                    <button class="filter-btn" style="color:#bdc3c7; border-color:#bdc3c7;" onclick="filterCards('common')">Common</button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="mainDataTable"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
