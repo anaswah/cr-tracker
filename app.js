@@ -1,5 +1,5 @@
 /**
- * Clash Royale Web Engine v23.5 - Mobile Ready Edition
+ * Clash Royale Web Engine v24.1 - Deck Advisor Edition (Clan Rules Fixed)
  * Engineered for M7amd 3naswah
  */
 
@@ -79,8 +79,11 @@ function loadTagHistory() {
             let option = document.createElement("option"); option.value = tag; datalist.appendChild(option);
         });
     }
-    if (!document.getElementById("playerTag").value) {
-        document.getElementById("playerTag").value = history.length > 0 ? history[0] : "2RG9P9Y";
+    
+    // التعديل الاحترافي للنسخة العامة: 
+    // إذا المربع فاضي وفي تاريخ بحث، بنحط آخر حساب. إذا زائر جديد، بنخليه فاضي!
+    if (!document.getElementById("playerTag").value && history.length > 0) {
+        document.getElementById("playerTag").value = history[0];
     }
 }
 
@@ -269,7 +272,65 @@ async function startAnalysis() {
         }
         document.getElementById("topUpgradesData").innerHTML = upHTML + `</table>`;
 
-        // --- ADVISOR ALGORITHM v23.4 (Smart Flow Update) ---
+        // --- NEW FEATURE: DECK ANALYSIS & ADVISOR (v24.1) ---
+        let deckIDs = new Set();
+        if(pData.currentDeck) pData.currentDeck.forEach(c => deckIDs.add(c.id));
+        if(pData.currentDeckSupportCards) pData.currentDeckSupportCards.forEach(c => deckIDs.add(c.id));
+
+        let myDeckCards = globalResults.filter(r => deckIDs.has(r.id));
+        
+        let deckGoldNeeded = 0;
+        myDeckCards.forEach(c => deckGoldNeeded += c.rem);
+        
+        // 1. تحديد الفئات المسموح طلبها اليوم بناءً على قوانين الكلان
+        const isEpicSundayDeck = (new Date().getDay() === 0);
+        let permittedDeckRarities = isEpicSundayDeck ? ["common", "rare", "epic"] : ["common", "rare"];
+
+        // 2. فلترة بطاقات التشكيلة: (غير ماكس + مسموح طلبها اليوم + تحتاج نسخ فعلياً)
+        // 2. فلترة بطاقات التشكيلة: (غير ماكس + مسموح طلبها اليوم + تحتاج نسخ فعلياً)
+        let deckPriority = myDeckCards.filter(c => 
+            c.actualLvl < MAX_LEVEL && 
+            permittedDeckRarities.includes(c.rarityKey) &&
+            c.pctToNext < 1
+        ).sort((a,b) => {
+            // الشرط الأول: الأولوية للبطاقة ذات اللفل الأقل
+            if (a.actualLvl !== b.actualLvl) return a.actualLvl - b.actualLvl;
+            // الشرط الثاني: إذا تساوت البطاقتان في اللفل، نعرض الأقرب للاكتمال أولاً
+            return b.pctToNext - a.pctToNext;
+        });
+        
+        let deckHTML = `<table class="info-table"><tr><td>Gold to Max Deck</td><td class="red-text">${deckGoldNeeded.toLocaleString()}</td></tr></table>`;
+        deckHTML += `<div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:5px; justify-content:center;">`;
+        
+        myDeckCards.forEach(c => {
+            let borderColor = c.actualLvl === MAX_LEVEL ? "#f1c40f" : "#444";
+            deckHTML += `<div style="border:1px solid ${borderColor}; padding:5px; border-radius:4px; text-align:center; width:60px;">
+                <img src="${c.imgUrl}" style="width:30px; height:36px;"><br>
+                <span style="font-size:10px; color:${c.actualLvl === MAX_LEVEL ? 'gold' : 'white'}">Lvl ${c.actualLvl}</span>
+            </div>`;
+        });
+        deckHTML += `</div>`;
+        document.getElementById("deckData").innerHTML = deckHTML;
+
+        let daHTML = `
+            <div class="tooltip-container" style="display:block; text-align:center;">
+                <h3 style="color:#e74c3c; margin-bottom:10px;">🎯 DECK ADVISOR <span class="tooltip-icon" style="font-size:10px;">❓<span class="tooltip-text" style="width:200px; margin-left:-100px;">Clan request priority for your main deck. Respects Epic Sunday!</span></span></h3>
+            </div>
+            <table class="info-table"><tr><th>Card</th><th>Needed</th><th>Ready %</th></tr>`;
+        
+        for(let i=0; i<3; i++) {
+             if(deckPriority[i]) {
+                 daHTML += `<tr><td class="card-cell"><img src="${deckPriority[i].imgUrl}" class="card-img"> <span>${deckPriority[i].cleanName}</span></td>
+                 <td class="gold-text">${deckPriority[i].rem > 0 ? (deckPriority[i].rem/1000).toFixed(0)+'k' : 'Cards'}</td>
+                 <td class="green-text">${(deckPriority[i].pctToNext*100).toFixed(1)}%</td></tr>`;
+             } else {
+                 daHTML += `<tr><td style="color:#444">-</td><td style="color:#444">-</td><td style="color:#444">READY/MAX</td></tr>`;
+             }
+        }
+        document.getElementById("deckAdvisorData").innerHTML = daHTML + `</table>`;
+
+
+        // --- ACCOUNT ADVISOR ALGORITHM v23.4 (Smart Flow Update) ---
         const isEpicSunday = (new Date().getDay() === 0);
         const getScore = (r) => { 
             let next = r.actualLvl + 1; 
@@ -312,7 +373,7 @@ async function startAnalysis() {
         let titleColor = isEpicSunday ? '#9b59b6' : '#3498db';
         let advHTML = `
             <div class="tooltip-container" style="display:block; text-align:center;">
-                <h3 style="color:${titleColor}; margin-bottom:10px;">🛒 ADVISOR (LVL ${targetLevel}+) <span class="tooltip-icon" style="font-size:10px;">❓<span class="tooltip-text" style="width:220px; margin-left:-110px;">Finds the lowest level cards that still need copies from the clan.</span></span></h3>
+                <h3 style="color:${titleColor}; margin-bottom:10px;">🛒 ACCOUNT ADVISOR (LVL ${targetLevel}+) <span class="tooltip-icon" style="font-size:10px;">❓<span class="tooltip-text" style="width:220px; margin-left:-110px;">Finds the lowest level cards that still need copies from the clan.</span></span></h3>
             </div>
             <table class="info-table"><tr><th>Card</th><th>Rarity</th><th>Stock</th><th>Ready %</th></tr>`;
         
@@ -329,10 +390,8 @@ async function startAnalysis() {
         Chart.defaults.color = '#ccc';
         if(chartGold) chartGold.destroy();
         chartGold = new Chart(document.getElementById('goldChart'), { type: 'pie', data: { labels: ['Invested Gold', 'Remaining Gold'], datasets: [{ data: [spent, rem], backgroundColor: ['#2ecc71', '#e74c3c'], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { title: { display: true, text: 'Gold Progress' } } } });
-        
         if(chartCards) chartCards.destroy();
         chartCards = new Chart(document.getElementById('cardsChart'), { type: 'doughnut', data: { labels: ['Collected', 'Missing Common', 'Missing Rare', 'Missing Epic', 'Missing Leg.', 'Missing Champ.'], datasets: [{ data: [cardCollTotal, missingByRarity.common, missingByRarity.rare, missingByRarity.epic, missingByRarity.legendary, missingByRarity.champion], backgroundColor: ['#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#00cec9', '#f1c40f'], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { title: { display: true, text: 'Card Collection Spectrum' } }, cutout: '50%' } });
-        
         if(chartXp) chartXp.destroy();
         chartXp = new Chart(document.getElementById('xpChart'), { type: 'doughnut', data: { labels: ['Earned XP', 'Remaining XP'], datasets: [{ data: [playerTotalXp, totalXpToMax], backgroundColor: ['#8e44ad', '#ecf0f1'], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { title: { display: true, text: "King's Journey XP" } }, cutout: '50%' } });
 
@@ -369,6 +428,11 @@ function renderMainTable() {
             let bOwned = b.status !== "Not Owned" ? 1 : 0;
             if (aOwned !== bOwned) return bOwned - aOwned; 
         }
+
+        let aMaxed = (a.actualLvl === MAX_LEVEL) ? 1 : 0;
+        let bMaxed = (b.actualLvl === MAX_LEVEL) ? 1 : 0;
+        if (aMaxed !== bMaxed) return bMaxed - aMaxed;
+
         if (b.pctToNext !== a.pctToNext) return b.pctToNext - a.pctToNext;
         return b.actualLvl - a.actualLvl;
     });
@@ -446,5 +510,4 @@ function renderMainTable() {
     });
     tableHTML += `</tbody>`;
     document.getElementById("mainDataTable").innerHTML = tableHTML;
-
 }
