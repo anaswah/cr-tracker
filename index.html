@@ -12,7 +12,7 @@
         <h1>👑 Clash Royale Tracker Pro</h1>
         
         <div class="search-box">
-            <input type="text" id="playerTag" placeholder="Enter Player Tag (e.g. 2RG9P9Y)" list="tagHistory">
+            <input type="text" id="playerTag" placeholder="Enter Player Tag" list="tagHistory">
             <datalist id="tagHistory"></datalist>
             <button onclick="startAnalysis()">Analyze</button>
         </div>
@@ -45,30 +45,37 @@
                     <div class="info-box" id="breakdownData"></div>
                 </div>
 
-                <h2 style="margin-top: 30px; text-align: center; border-bottom: 2px solid #444; padding-bottom: 10px;">🧠 Smart Strategy Hub</h2>
+                <h2 style="margin-top: 30px; text-align: center; border-bottom: 2px solid #444; padding-bottom: 10px;">🧠 Command Center</h2>
                 
-                <div class="stats-grid" style="margin-top: 20px; grid-template-columns: 1fr;">
-                    <div class="info-box">
-                        <h3 style="color:#e67e22; text-align:center; margin-bottom:10px;">🚀 MASS-UPGRADE PLAN</h3>
-                        <div id="strategyData"></div>
-                        <div style="background:#111; padding:10px; border-radius:5px; margin-top:10px;">
-                            <strong>Optimal Cards to Upgrade:</strong> <span id="ladderPlanText" class="green-text"></span>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="stats-grid" style="margin-top: 20px;">
                     <div class="info-box">
-                        <h3 style="color:#9b59b6; text-align:center; margin-bottom:10px;">⚡ INSTANT XP PLAN</h3>
-                        <div style="background:#111; padding:10px; border-radius:5px; text-align:center;">
-                            <span id="instantPlanText" class="gold-text" style="font-weight:bold;"></span>
+                        <h3 style="color:#e67e22; text-align:center; margin-bottom:10px;">🏗️ ACCOUNT BUILDER</h3>
+                        <div id="strategyData"></div>
+                        <div style="background:#111; padding:10px; border-radius:5px; margin-top:10px;">
+                            <strong>Optimal Upgrade:</strong> <span id="ladderPlanText" class="green-text"></span>
                         </div>
+                    </div>
+
+                    <div class="info-box" style="border: 1px solid #e74c3c;">
+                        <h3 style="color:#e74c3c; text-align:center; margin-bottom:10px;">⚔️ BATTLE DECK ELITE</h3>
+                        <div id="deckData"></div>
                     </div>
                 </div>
 
                 <div class="stats-grid" style="margin-top: 20px;">
                     <div class="info-box" id="advisorData"></div>
-                    <div class="info-box" id="topUpgradesData"></div>
+                    <div class="info-box" id="deckAdvisorData"></div>
+                </div>
+                
+                <div class="stats-grid" style="margin-top: 20px;">
+                     <div class="info-box" id="topUpgradesData"></div>
+                     
+                     <div class="info-box">
+                        <h3 style="color:#9b59b6; text-align:center; margin-bottom:10px;">⚡ INSTANT XP BANK</h3>
+                        <div style="background:#111; padding:10px; border-radius:5px; text-align:center;">
+                            <span id="instantPlanText" class="gold-text" style="font-weight:bold;"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
