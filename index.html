@@ -4,27 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CR Tracker Pro</title>
+    <meta name="google" content="notranslate">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+    <div class="background-glow"></div>
     <div class="container">
-        <h1>👑 Clash Royale Tracker Pro</h1>
+        <h1 class="logo-title"><i class="fa-solid fa-crown" style="color:var(--accent-gold);"></i>CR <span>Tracker Pro</span></h1>
+        <p style="text-align:center; color:var(--text-muted); margin-top:-20px; margin-bottom:30px; font-size:0.9rem;">Advanced Analytics & Upgrade Advisor for Clash Royale</p>
         
         <div class="search-box">
-            <input type="text" id="playerTag" placeholder="Enter Player Tag" list="tagHistory">
+            <input type="text" id="playerTag" placeholder="Enter Player Tag (e.g. 2RG9P9Y)" list="tagHistory" autocomplete="off">
             <datalist id="tagHistory"></datalist>
-            <button onclick="startAnalysis()">Analyze</button>
+            <button onclick="startAnalysis()"><i class="fa-solid fa-magnifying-glass"></i> Analyze</button>
         </div>
         
         <div id="statusMessage" class="status-msg"></div>
 
         <div id="dashboard" class="hidden">
-            <h2 id="playerGreeting" style="text-align: center; color: #f1c40f; margin-bottom: 20px;"></h2>
+            <h2 id="playerGreeting" style="text-align: center; margin-bottom: 25px; font-weight: 800; font-size: 1.8rem; letter-spacing: -0.5px;"></h2>
             
             <div class="tab-container">
-                <button class="tab-btn active" onclick="openTab('overview')">📊 Overview</button>
-                <button class="tab-btn" onclick="openTab('mainTable')">🗂️ Card Database</button>
+                <button class="tab-btn active" onclick="openTab('overview')"><i class="fa-solid fa-chart-line"></i> Overview</button>
+                <button class="tab-btn" onclick="openTab('mainTable')"><i class="fa-solid fa-database"></i> Card Database</button>
             </div>
 
             <div id="overview" class="tab-content active">
@@ -35,45 +42,54 @@
                     <div class="info-box" id="collectionBox"></div>
                 </div>
 
-                <div class="stats-grid" style="margin-top: 20px;">
+                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
                     <div class="info-box chart-container"><canvas id="goldChart"></canvas></div>
                     <div class="info-box chart-container"><canvas id="cardsChart"></canvas></div>
                     <div class="info-box chart-container"><canvas id="xpChart"></canvas></div>
                 </div>
 
-                <div class="stats-grid" style="margin-top: 20px; grid-template-columns: 1fr;">
+                <h2 class="section-title"><i class="fa-solid fa-layer-group"></i> Level Distribution</h2>
+                <p class="section-desc">A visual breakdown of how your card collection is distributed across different levels.</p>
+                <div class="stats-grid" style="grid-template-columns: 1fr;">
+                    <div class="info-box chart-container" style="height: 250px;"><canvas id="levelChart"></canvas></div>
+                </div>
+
+                <div class="stats-grid" style="grid-template-columns: 1fr;">
                     <div class="info-box" id="breakdownData"></div>
                 </div>
 
-                <h2 style="margin-top: 30px; text-align: center; border-bottom: 2px solid #444; padding-bottom: 10px;">🧠 Command Center</h2>
+                <h2 class="section-title"><i class="fa-solid fa-microchip"></i> Command Center</h2>
+                <p class="section-desc">AI-powered recommendations to maximize your account progression and optimize your main battle deck.</p>
                 
-                <div class="stats-grid" style="margin-top: 20px;">
+                <div class="stats-grid">
                     <div class="info-box">
-                        <h3 style="color:#e67e22; text-align:center; margin-bottom:10px;">🏗️ ACCOUNT BUILDER</h3>
+                        <h3 style="color:var(--accent-blue);"><i class="fa-solid fa-hammer"></i> Account Builder</h3>
                         <div id="strategyData"></div>
-                        <div style="background:#111; padding:10px; border-radius:5px; margin-top:10px;">
-                            <strong>Optimal Upgrade:</strong> <span id="ladderPlanText" class="green-text"></span>
+                        <div class="alert-banner">
+                            <strong><i class="fa-solid fa-bullseye"></i> Optimal Action</strong>
+                            <span id="ladderPlanText" class="green-text" style="font-weight:600;"></span>
                         </div>
                     </div>
 
-                    <div class="info-box" style="border: 1px solid #e74c3c;">
-                        <h3 style="color:#e74c3c; text-align:center; margin-bottom:10px;">⚔️ BATTLE DECK ELITE</h3>
+                    <div class="info-box box-highlight">
+                        <h3 style="color:var(--accent-red);"><i class="fa-solid fa-swords"></i> Battle Deck Elite</h3>
                         <div id="deckData"></div>
                     </div>
                 </div>
 
-                <div class="stats-grid" style="margin-top: 20px;">
+                <div class="stats-grid">
                     <div class="info-box" id="advisorData"></div>
                     <div class="info-box" id="deckAdvisorData"></div>
                 </div>
                 
-                <div class="stats-grid" style="margin-top: 20px;">
+                <div class="stats-grid">
                      <div class="info-box" id="topUpgradesData"></div>
-                     
                      <div class="info-box">
-                        <h3 style="color:#9b59b6; text-align:center; margin-bottom:10px;">⚡ INSTANT XP BANK</h3>
-                        <div style="background:#111; padding:10px; border-radius:5px; text-align:center;">
-                            <span id="instantPlanText" class="gold-text" style="font-weight:bold;"></span>
+                        <h3 style="color:var(--accent-purple);"><i class="fa-solid fa-bolt"></i> Instant XP Bank</h3>
+                        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Cards you can upgrade right now to gain XP instantly.</p>
+                        <div class="alert-banner instant">
+                            <strong style="justify-content:center;"><i class="fa-solid fa-coins"></i> Ready to Upgrade</strong>
+                            <span id="instantPlanText" class="gold-text" style="font-weight:bold; font-size: 1.1rem; display:block; margin-top:5px;"></span>
                         </div>
                     </div>
                 </div>
@@ -81,13 +97,13 @@
 
             <div id="mainTable" class="tab-content">
                 <div class="filter-container">
-                    <button class="filter-btn active" onclick="filterCards('all')">All Cards</button>
+                    <button class="filter-btn active" onclick="filterCards('all')">All</button>
                     <button class="filter-btn" onclick="filterCards('tower')">Towers</button>
-                    <button class="filter-btn" style="color:#f1c40f; border-color:#f1c40f;" onclick="filterCards('champion')">Champions</button>
-                    <button class="filter-btn" style="color:#00cec9; border-color:#00cec9;" onclick="filterCards('legendary')">Legendary</button>
-                    <button class="filter-btn" style="color:#9b59b6; border-color:#9b59b6;" onclick="filterCards('epic')">Epic</button>
-                    <button class="filter-btn" style="color:#e67e22; border-color:#e67e22;" onclick="filterCards('rare')">Rare</button>
-                    <button class="filter-btn" style="color:#bdc3c7; border-color:#bdc3c7;" onclick="filterCards('common')">Common</button>
+                    <button class="filter-btn" style="color:var(--accent-gold);" onclick="filterCards('champion')">Champions</button>
+                    <button class="filter-btn" style="color:#00cec9;" onclick="filterCards('legendary')">Legendary</button>
+                    <button class="filter-btn" style="color:#9b59b6;" onclick="filterCards('epic')">Epic</button>
+                    <button class="filter-btn" style="color:#e67e22;" onclick="filterCards('rare')">Rare</button>
+                    <button class="filter-btn" style="color:#bdc3c7;" onclick="filterCards('common')">Common</button>
                 </div>
                 <div class="table-container">
                     <table class="data-table" id="mainDataTable"></table>
