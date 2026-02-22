@@ -1,5 +1,5 @@
 /**
- * Clash Royale Web Engine v24.1 - Deck Advisor Edition (Clan Rules Fixed)
+ * Clash Royale Web Engine v25.1 - Final Pro Update
  * Engineered for M7amd 3naswah
  */
 
@@ -36,7 +36,11 @@ const BACKUP_TOWERS = [
   { id: 159000004, name: "Royal Chef", rarity: "legendary" }
 ];
 
-let chartGold, chartCards, chartXp;
+// Configure Chart.js for Dark Theme
+Chart.defaults.color = '#a1a1aa';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
+let chartGold, chartCards, chartXp, chartLevels;
 let globalResults = []; 
 let globalMinLevel = 14;
 let currentActiveFilter = 'all';
@@ -61,6 +65,12 @@ function filterCards(filterType) {
     if(activeBtn) activeBtn.classList.add('active');
     currentActiveFilter = filterType;
     renderMainTable(); 
+    
+    // السطر السحري: إرجاع الجدول للأعلى عند تغيير الفلتر
+    let tableContainer = document.querySelector('.table-container');
+    if (tableContainer) {
+        tableContainer.scrollTop = 0;
+    }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -79,9 +89,6 @@ function loadTagHistory() {
             let option = document.createElement("option"); option.value = tag; datalist.appendChild(option);
         });
     }
-    
-    // التعديل الاحترافي للنسخة العامة: 
-    // إذا المربع فاضي وفي تاريخ بحث، بنحط آخر حساب. إذا زائر جديد، بنخليه فاضي!
     if (!document.getElementById("playerTag").value && history.length > 0) {
         document.getElementById("playerTag").value = history[0];
     }
@@ -116,17 +123,17 @@ async function startAnalysis() {
     if (!tag) { statusMsg.innerText = "Please enter a valid Player Tag!"; return; }
 
     saveTagToHistory(tag);
-    statusMsg.innerText = "⏳ Connecting to Supercell Servers...";
-    statusMsg.style.color = "#f39c12";
+    statusMsg.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Connecting to Supercell Servers...`;
+    statusMsg.style.color = "var(--accent-blue)";
     dash.classList.remove("hidden"); 
     dash.style.opacity = "0.5"; 
 
     try {
-        let pRes = await fetch(`${PROXY_BASE}/player?tag=${tag}`);
+        let pRes = await fetch(`${PROXY_BASE}/player?tag=${tag}&_t=${new Date().getTime()}`, { cache: "no-store" });
         if (!pRes.ok) throw new Error(`Player not found or Server error (${pRes.status})`);
         let pData = await pRes.json();
         
-        statusMsg.innerText = "⏳ Processing Game Data...";
+        statusMsg.innerHTML = `<i class="fa-solid fa-microchip fa-spin"></i> Processing Game Data...`;
         let gCardsRaw = await fetchAllCards();
 
         let gCards = Array.isArray(gCardsRaw) ? gCardsRaw : [];
@@ -146,6 +153,9 @@ async function startAnalysis() {
         let rarityStats = { "common": {gs:0, gr:0, cs:0, ct:0}, "rare": {gs:0, gr:0, cs:0, ct:0}, "epic": {gs:0, gr:0, cs:0, ct:0}, "legendary": {gs:0, gr:0, cs:0, ct:0}, "champion": {gs:0, gr:0, cs:0, ct:0} };
         let towerS = 0, towerR = 0, towerCS = 0, towerCT = 0;
         
+        // Count for level distribution chart
+        let levelCounts = Array(17).fill(0);
+
         globalResults = gCards.map(gCard => {
             const pCard = pMap[gCard.id];
             const isOwned = !!pCard;
@@ -156,6 +166,7 @@ async function startAnalysis() {
 
             const currentLvl = isOwned ? ((pCard.level || 0) + (START_LVL[rarity] - 1)) : 0;
             if (isOwned && currentLvl > 0 && currentLvl < minAccountLevel) minAccountLevel = currentLvl;
+            if (isOwned && currentLvl > 0 && currentLvl <= 16) levelCounts[currentLvl]++;
 
             let goldSpent = 0, goldNeeded = 0, cardsInvested = 0, cardsTotalReq = 0, missingPerLevel = Array(MAX_LEVEL + 1).fill(0), tempStock = isOwned ? (pCard.count || 0) : 0;
 
@@ -198,7 +209,7 @@ async function startAnalysis() {
         const totalGold = spent + rem;
         const unownedCount = globalResults.filter(r => r.status === "Not Owned").length;
 
-        document.getElementById("playerGreeting").innerText = `👑 WELCOME, ${pData.name}`;
+        document.getElementById("playerGreeting").innerHTML = `<i class="fa-solid fa-user-astronaut" style="color: var(--accent-blue);"></i> WELCOME, <span style="color:var(--text-main);">${pData.name}</span>`;
 
         let daysPlayedRaw = 0;
         if(pData && pData.badges) { const badge = pData.badges.find(b => b.name === "YearsPlayed"); if(badge) daysPlayedRaw = badge.progress; }
@@ -206,8 +217,6 @@ async function startAnalysis() {
         let years = today.getFullYear() - creationDate.getFullYear(); let months = today.getMonth() - creationDate.getMonth(); let days = today.getDate() - creationDate.getDate();
         if (days < 0) { months--; const prevMonthDate = new Date(today.getFullYear(), today.getMonth(), 0); days += prevMonthDate.getDate(); }
         if (months < 0) { years--; months += 12; }
-        
-        let veteranTitle = years >= 10 ? "🧙‍♂️ GRAND ELDER" : years >= 7 ? "🎖️ WAR VETERAN" : years >= 4 ? "⚔️ BATTLE HARDENED" : "🛡️ KNIGHT";
 
         let currentExpLvl = pData.expLevel || 1, currentExpPoints = pData.expPoints || 0, isMaxLevelKing = (currentExpLvl >= 90);
         let totalXpOverall = 0, playerTotalXp = 0;
@@ -240,39 +249,68 @@ async function startAnalysis() {
         readyCards.sort((a, b) => b.efficiency - a.efficiency); 
         let instantXP = 0, instantGold = 0, instantNames = [], xpNeededB = xpNeededForNext;
         for (let c of readyCards) { if (xpNeededB <= 0) break; instantXP += c.nextXp; instantGold += c.nextGold; instantNames.push(`${c.cleanName}(${c.actualLvl + 1})`); xpNeededB -= c.nextXp; }
+        
+        // تم إصلاح الأقواس في هذا السطر هنا:
         let instantPlanStr = isMaxLevelKing ? "Maxed!" : (instantXP >= xpNeededForNext ? (instantNames.length > 2 ? `${instantNames.slice(0, 2).join(", ")} +${instantNames.length - 2} more (${(instantGold/1000).toFixed(1)}k Gold)` : `${instantNames.join(", ")} (${(instantGold/1000).toFixed(1)}k Gold)`) : (instantXP > 0 ? `All ready give ${instantXP}XP. Not enough.` : "No ready cards."));
 
-        document.getElementById("legacyData").innerHTML = `<div style="display: flex; justify-content: space-around; font-family: monospace; font-size: 20px;"><div><span style="color:#2ecc71">${years}</span><br><span style="font-size:12px;color:#aaa">YEARS</span></div><div><span style="color:#2ecc71">${String(months).padStart(2, '0')}</span><br><span style="font-size:12px;color:#aaa">MONTHS</span></div><div><span style="color:#2ecc71">${String(days).padStart(2, '0')}</span><br><span style="font-size:12px;color:#aaa">DAYS</span></div><div><span style="color:#9b59b6">${currentExpLvl}</span><br><span style="font-size:12px;color:#aaa">KING LVL</span></div></div><h3 style="color: #f1c40f; text-align: center; margin-top: 15px;">${veteranTitle}</h3>`;
-        document.getElementById("financialBox").innerHTML = `<h3 style="text-align:center; color:#e74c3c; margin-bottom:10px;">💰 FINANCIAL STATUS</h3><table class="info-table"><tr><td>Invested</td><td class="green-text">${spent.toLocaleString()}</td><td>${(spent/totalGold*100).toFixed(1)}%</td></tr><tr><td>Remaining</td><td class="red-text">${rem.toLocaleString()}</td><td>${(rem/totalGold*100).toFixed(1)}%</td></tr><tr style="background:#111; font-weight:bold;"><td>TOTAL</td><td class="gold-text">${totalGold.toLocaleString()}</td><td>100%</td></tr></table>`;
-        document.getElementById("collectionBox").innerHTML = `<h3 style="text-align:center; color:#3498db; margin-bottom:10px;">📦 CARD COLLECTION</h3><table class="info-table"><tr><td>Collected</td><td class="green-text">${cardCollTotal.toLocaleString()}</td><td>${(cardCollTotal/cardReqTotal*100).toFixed(1)}%</td></tr><tr><td>Missing</td><td class="red-text">${(cardReqTotal - cardCollTotal).toLocaleString()}</td><td>${((cardReqTotal - cardCollTotal)/cardReqTotal*100).toFixed(1)}%</td></tr><tr style="background:#111; font-weight:bold;"><td>TOTAL</td><td style="color:#fff">${cardReqTotal.toLocaleString()}</td><td>100%</td></tr></table>`;
-        document.getElementById("playerBox").innerHTML = `<h3 style="text-align:center; color:#f39c12; margin-bottom:10px;">🌟 PLAYER STATS</h3><table class="info-table"><tr><td>Star Points</td><td class="gold-text">${(pData.starPoints||0).toLocaleString()}</td><td>${(pData.starPoints||0)>=5000000?'⭐':''}</td></tr><tr><td>Maxed Cards</td><td class="green-text">${maxedCount}</td><td>/ ${globalResults.length}</td></tr><tr><td>Unowned</td><td class="red-text">${unownedCount}</td><td>${unownedCount===0?'✅':''}</td></tr></table>`;
+        // UI Updates
+        document.getElementById("legacyData").innerHTML = `
+        <h3 style="color:var(--text-muted);"><i class="fa-regular fa-clock"></i> Account Age</h3>
+        <div style="display: flex; justify-content: space-around; text-align: center; margin-top: 15px; background: rgba(0,0,0,0.2); border-radius:8px; padding:15px 5px;">
+            <div><span style="font-size:24px; font-weight:700; color:var(--text-main);">${years}</span><br><span style="font-size:10px; color:var(--text-muted); letter-spacing:1px;">YEARS</span></div>
+            <div><span style="font-size:24px; font-weight:700; color:var(--text-main);">${String(months).padStart(2, '0')}</span><br><span style="font-size:10px; color:var(--text-muted); letter-spacing:1px;">MONTHS</span></div>
+            <div><span style="font-size:24px; font-weight:700; color:var(--text-main);">${String(days).padStart(2, '0')}</span><br><span style="font-size:10px; color:var(--text-muted); letter-spacing:1px;">DAYS</span></div>
+            <div style="border-left:1px solid var(--border-color); padding-left:10px;"><span style="font-size:24px; font-weight:700; color:var(--accent-blue);">${currentExpLvl}</span><br><span style="font-size:10px; color:var(--accent-blue); letter-spacing:1px;">KING LVL</span></div>
+        </div>`;
+        
+        document.getElementById("financialBox").innerHTML = `<h3><i class="fa-solid fa-coins" style="color:var(--accent-gold)"></i> Financial Status</h3>
+        <table class="info-table"><tr><td>Invested</td><td style="text-align:right;" class="green-text">${spent.toLocaleString()}</td><td style="text-align:right;">${(spent/totalGold*100).toFixed(1)}%</td></tr>
+        <tr><td>Remaining</td><td style="text-align:right;" class="red-text">${rem.toLocaleString()}</td><td style="text-align:right;">${(rem/totalGold*100).toFixed(1)}%</td></tr>
+        <tr style="border-top: 1px solid var(--border-color);"><td><strong style="color:var(--text-main);">TOTAL</strong></td><td style="text-align:right;" class="gold-text">${totalGold.toLocaleString()}</td><td style="text-align:right;">100%</td></tr></table>`;
+        
+        document.getElementById("collectionBox").innerHTML = `<h3><i class="fa-solid fa-layer-group" style="color:var(--accent-blue)"></i> Card Collection</h3>
+        <table class="info-table"><tr><td>Collected</td><td style="text-align:right;" class="green-text">${cardCollTotal.toLocaleString()}</td><td style="text-align:right;">${(cardCollTotal/cardReqTotal*100).toFixed(1)}%</td></tr>
+        <tr><td>Missing</td><td style="text-align:right;" class="red-text">${(cardReqTotal - cardCollTotal).toLocaleString()}</td><td style="text-align:right;">${((cardReqTotal - cardCollTotal)/cardReqTotal*100).toFixed(1)}%</td></tr>
+        <tr style="border-top: 1px solid var(--border-color);"><td><strong style="color:var(--text-main);">TOTAL</strong></td><td style="text-align:right; color:var(--text-main); font-weight:bold;">${cardReqTotal.toLocaleString()}</td><td style="text-align:right;">100%</td></tr></table>`;
+        
+        document.getElementById("playerBox").innerHTML = `<h3><i class="fa-solid fa-chart-simple" style="color:var(--accent-purple)"></i> Player Stats</h3>
+        <table class="info-table"><tr><td>Star Points</td><td style="text-align:right;" class="gold-text">${(pData.starPoints||0).toLocaleString()}</td><td style="text-align:right;"></td></tr>
+        <tr><td>Maxed Cards</td><td style="text-align:right;" class="green-text">${maxedCount}</td><td style="text-align:right;">/ ${globalResults.length}</td></tr>
+        <tr><td>Unowned</td><td style="text-align:right;" class="red-text">${unownedCount}</td><td style="text-align:right;"></td></tr></table>`;
 
-        let bdHTML = `<h3 style="text-align:center; margin-bottom:10px;">📊 RARITY BREAKDOWN</h3><table class="info-table"><tr><th>Rarity</th><th>Inv Gold</th><th>Rem Gold</th><th>Cards Coll</th><th>Cards %</th></tr>`;
-        const addRow = (label, obj) => { bdHTML += `<tr><td>${label}</td><td>${obj.gs.toLocaleString()}</td><td>${obj.gr.toLocaleString()}</td><td>${obj.cs.toLocaleString()}</td><td>${(obj.cs/obj.ct*100).toFixed(1)}%</td></tr>`; };
+        let bdHTML = `<h3><i class="fa-solid fa-chart-pie"></i> Rarity Breakdown</h3>
+        <table class="info-table"><tr><th style="text-align:left; color:var(--text-muted); font-size:10px;">RARITY</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">INV GOLD</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">REM GOLD</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">CARDS</th></tr>`;
+        const addRow = (label, obj) => { bdHTML += `<tr><td style="color:var(--text-main);">${label}</td><td style="text-align:right;">${obj.gs.toLocaleString()}</td><td style="text-align:right;">${obj.gr.toLocaleString()}</td><td style="text-align:right;">${(obj.cs/obj.ct*100).toFixed(1)}%</td></tr>`; };
         addRow("Common", rarityStats.common); addRow("Rare", rarityStats.rare); addRow("Epic", rarityStats.epic); addRow("Legendary", rarityStats.legendary); addRow("Champion", rarityStats.champion);
-        bdHTML += `<tr style="font-weight:bold; background:#111;"><td>Towers</td><td>${towerS.toLocaleString()}</td><td>${towerR.toLocaleString()}</td><td>${towerCS.toLocaleString()}</td><td>${(towerCS/towerCT*100).toFixed(1)}%</td></tr></table>`;
+        bdHTML += `<tr style="border-top: 1px solid var(--border-color);"><td style="color:var(--accent-red); font-weight:bold;">Towers</td><td style="text-align:right; font-weight:bold;">${towerS.toLocaleString()}</td><td style="text-align:right; font-weight:bold;">${towerR.toLocaleString()}</td><td style="text-align:right; font-weight:bold;">${(towerCS/towerCT*100).toFixed(1)}%</td></tr></table>`;
         document.getElementById("breakdownData").innerHTML = bdHTML;
 
-        document.getElementById("strategyData").innerHTML = `<table class="info-table" style="margin-bottom: 15px;"><tr><td style="background:#111;">Lowest Level</td><td class="gold-text">${lowestLvl}</td><td style="background:#111;">Cards at this Lvl</td><td class="green-text">${countLowest}</td><td style="background:#111;">Target Upgrade</td><td class="gold-text">Lvl ${targetLvlForLowest}</td></tr><tr><td style="background:#111;">XP per Card</td><td>${xpPerUpgrade.toLocaleString()}</td><td style="background:#111;">Total XP Gained</td><td class="green-text">${totalXpGain.toLocaleString()}</td><td style="background:#111;">Total Cost</td><td class="red-text">${totalGoldCostForMass.toLocaleString()}</td></tr><tr><td style="background:#111;">Simulated King Lvl</td><td class="gold-text">${simulatedLevel}</td><td style="background:#111;">XP Rem (Lvl 90)</td><td>${totalXpToMax.toLocaleString()}</td><td style="background:#111;">Rem After Sim</td><td class="green-text">${remAfterSim.toLocaleString()}</td></tr></table>`;
+        document.getElementById("strategyData").innerHTML = `<table class="info-table">
+        <tr><td>Lowest Level</td><td style="text-align:right;" class="gold-text">${lowestLvl}</td><td style="text-align:right;">(x${countLowest})</td></tr>
+        <tr><td>Target Lvl</td><td style="text-align:right;" class="gold-text">${targetLvlForLowest}</td><td style="text-align:right;"></td></tr>
+        <tr><td>XP Gained</td><td style="text-align:right;" class="green-text">+${totalXpGain.toLocaleString()}</td><td style="text-align:right;"></td></tr>
+        <tr><td>Total Cost</td><td style="text-align:right;" class="red-text">-${totalGoldCostForMass.toLocaleString()}</td><td style="text-align:right;"></td></tr>
+        <tr style="border-top: 1px solid var(--border-color);"><td>Simulated King</td><td style="text-align:right;" class="gold-text">Lvl ${simulatedLevel}</td><td style="text-align:right;"></td></tr></table>`;
+        
         document.getElementById("ladderPlanText").innerText = ladderPlanStr;
         document.getElementById("instantPlanText").innerText = instantPlanStr;
 
         let upgradable = globalResults.filter(r => r.actualLvl < MAX_LEVEL && r.status !== "Not Owned");
         upgradable.sort((a, b) => b.pctToNext - a.pctToNext);
         let upHTML = `
-            <div class="tooltip-container" style="display:block; text-align:center;">
-                <h3 style="color:#2ecc71; margin-bottom:10px;">🎯 TOP 3 UPGRADES <span class="tooltip-icon" style="font-size:10px;">❓<span class="tooltip-text" style="width:200px; margin-left:-100px;">The cards closest to having enough copies for their next level upgrade.</span></span></h3>
-            </div>
-            <table class="info-table"><tr><th>Card</th><th>Next Lvl</th><th>Progress</th><th>Cost</th></tr>`;
+            <h3 style="color:var(--accent-green);"><i class="fa-solid fa-arrow-trend-up"></i> Top Upgrades 
+                <div class="tooltip-container"><i class="fa-solid fa-circle-info tooltip-icon"></i><span class="tooltip-text">Closest cards to having enough copies for next level.</span></div>
+            </h3>
+            <table class="info-table"><tr><th style="text-align:left; color:var(--text-muted); font-size:10px;">CARD</th><th style="text-align:center; color:var(--text-muted); font-size:10px;">LVL</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">PROG</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">COST</th></tr>`;
         for(let i=0; i<3; i++) {
             if(upgradable[i]) { 
                 let next = upgradable[i].actualLvl + 1; 
-                upHTML += `<tr><td class="card-cell"><img src="${upgradable[i].imgUrl}" class="card-img" onerror="this.style.display='none'"> <span>${upgradable[i].cleanName}</span></td><td>${next}</td><td class="green-text">${(upgradable[i].pctToNext*100).toFixed(1)}%</td><td class="gold-text">${GOLD_LADDER[next]}</td></tr>`; 
-            } else { upHTML += `<tr><td>-</td><td>-</td><td>-</td><td>-</td></tr>`; }
+                upHTML += `<tr><td class="card-cell" style="min-width:auto; gap:8px;"><img src="${upgradable[i].imgUrl}" class="card-img" style="width:24px; height:28px;" onerror="this.style.display='none'"> <span>${upgradable[i].cleanName}</span></td><td style="text-align:center;">${next}</td><td style="text-align:right;" class="green-text">${(upgradable[i].pctToNext*100).toFixed(1)}%</td><td style="text-align:right;" class="gold-text">${(GOLD_LADDER[next]/1000).toFixed(0)}k</td></tr>`; 
+            } else { upHTML += `<tr><td>-</td><td style="text-align:center;">-</td><td style="text-align:right;">-</td><td style="text-align:right;">-</td></tr>`; }
         }
         document.getElementById("topUpgradesData").innerHTML = upHTML + `</table>`;
 
-        // --- NEW FEATURE: DECK ANALYSIS & ADVISOR (v24.1) ---
+        // --- DECK ANALYSIS & ADVISOR ---
         let deckIDs = new Set();
         if(pData.currentDeck) pData.currentDeck.forEach(c => deckIDs.add(c.id));
         if(pData.currentDeckSupportCards) pData.currentDeckSupportCards.forEach(c => deckIDs.add(c.id));
@@ -282,55 +320,55 @@ async function startAnalysis() {
         let deckGoldNeeded = 0;
         myDeckCards.forEach(c => deckGoldNeeded += c.rem);
         
-        // 1. تحديد الفئات المسموح طلبها اليوم بناءً على قوانين الكلان
         const isEpicSundayDeck = (new Date().getDay() === 0);
         let permittedDeckRarities = isEpicSundayDeck ? ["common", "rare", "epic"] : ["common", "rare"];
 
-        // 2. فلترة بطاقات التشكيلة: (غير ماكس + مسموح طلبها اليوم + تحتاج نسخ فعلياً)
-        // 2. فلترة بطاقات التشكيلة: (غير ماكس + مسموح طلبها اليوم + تحتاج نسخ فعلياً)
         let deckPriority = myDeckCards.filter(c => 
-            c.actualLvl < MAX_LEVEL && 
-            permittedDeckRarities.includes(c.rarityKey) &&
-            c.pctToNext < 1
+            c.actualLvl < MAX_LEVEL && permittedDeckRarities.includes(c.rarityKey) && c.pctToNext < 1
         ).sort((a,b) => {
-            // الشرط الأول: الأولوية للبطاقة ذات اللفل الأقل
+            // الشرط الذهبي الجديد: تثبيت بطاقة الإيبيك في المركز الأول يوم الأحد!
+            if (isEpicSundayDeck) {
+                if (a.rarityKey === 'epic' && b.rarityKey !== 'epic') return -1;
+                if (b.rarityKey === 'epic' && a.rarityKey !== 'epic') return 1;
+            }
+            
+            // الشرط الثاني: الأولوية للبطاقة ذات اللفل الأقل
             if (a.actualLvl !== b.actualLvl) return a.actualLvl - b.actualLvl;
-            // الشرط الثاني: إذا تساوت البطاقتان في اللفل، نعرض الأقرب للاكتمال أولاً
+            
+            // الشرط الثالث: الترتيب حسب نسبة الجاهزية (الأقرب للاكتمال)
             return b.pctToNext - a.pctToNext;
         });
         
-        let deckHTML = `<table class="info-table"><tr><td>Gold to Max Deck</td><td class="red-text">${deckGoldNeeded.toLocaleString()}</td></tr></table>`;
-        deckHTML += `<div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:5px; justify-content:center;">`;
-        
+        let deckHTML = `<table class="info-table"><tr><td>Gold to Max Deck</td><td style="text-align:right;" class="red-text">${deckGoldNeeded.toLocaleString()}</td><td style="text-align:right;"></td></tr></table>`;
+        deckHTML += `<div style="margin-top:15px; display:flex; flex-wrap:wrap; gap:8px; justify-content:center;">`;
         myDeckCards.forEach(c => {
-            let borderColor = c.actualLvl === MAX_LEVEL ? "#f1c40f" : "#444";
-            deckHTML += `<div style="border:1px solid ${borderColor}; padding:5px; border-radius:4px; text-align:center; width:60px;">
-                <img src="${c.imgUrl}" style="width:30px; height:36px;"><br>
-                <span style="font-size:10px; color:${c.actualLvl === MAX_LEVEL ? 'gold' : 'white'}">Lvl ${c.actualLvl}</span>
+            let borderColor = c.actualLvl === MAX_LEVEL ? "var(--accent-gold)" : "var(--border-color)";
+            deckHTML += `<div style="border:1px solid ${borderColor}; padding:8px 5px; border-radius:8px; text-align:center; width:65px; background: rgba(0,0,0,0.2);">
+                <img src="${c.imgUrl}" style="width:35px; height:42px; object-fit:contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.8));"><br>
+                <span style="font-size:11px; font-weight:600; color:${c.actualLvl === MAX_LEVEL ? 'var(--accent-gold)' : 'var(--text-main)'}">Lvl ${c.actualLvl}</span>
             </div>`;
         });
         deckHTML += `</div>`;
         document.getElementById("deckData").innerHTML = deckHTML;
 
         let daHTML = `
-            <div class="tooltip-container" style="display:block; text-align:center;">
-                <h3 style="color:#e74c3c; margin-bottom:10px;">🎯 DECK ADVISOR <span class="tooltip-icon" style="font-size:10px;">❓<span class="tooltip-text" style="width:200px; margin-left:-100px;">Clan request priority for your main deck. Respects Epic Sunday!</span></span></h3>
-            </div>
-            <table class="info-table"><tr><th>Card</th><th>Needed</th><th>Ready %</th></tr>`;
-        
+            <h3 style="color:var(--accent-red);"><i class="fa-solid fa-crosshairs"></i> Deck Advisor 
+                <div class="tooltip-container"><i class="fa-solid fa-circle-info tooltip-icon"></i><span class="tooltip-text">Clan request priority. Respects Epic Sunday!</span></div>
+            </h3>
+            <table class="info-table"><tr><th style="text-align:left; color:var(--text-muted); font-size:10px;">CARD</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">NEEDED</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">READY %</th></tr>`;
         for(let i=0; i<3; i++) {
              if(deckPriority[i]) {
-                 daHTML += `<tr><td class="card-cell"><img src="${deckPriority[i].imgUrl}" class="card-img"> <span>${deckPriority[i].cleanName}</span></td>
-                 <td class="gold-text">${deckPriority[i].rem > 0 ? (deckPriority[i].rem/1000).toFixed(0)+'k' : 'Cards'}</td>
-                 <td class="green-text">${(deckPriority[i].pctToNext*100).toFixed(1)}%</td></tr>`;
+                 daHTML += `<tr><td class="card-cell" style="min-width:auto; gap:8px;"><img src="${deckPriority[i].imgUrl}" class="card-img" style="width:24px; height:28px;"> <span>${deckPriority[i].cleanName}</span></td>
+                 <td style="text-align:right;" class="gold-text">${deckPriority[i].rem > 0 ? (deckPriority[i].rem/1000).toFixed(0)+'k' : 'Cards'}</td>
+                 <td style="text-align:right;" class="green-text">${(deckPriority[i].pctToNext*100).toFixed(1)}%</td></tr>`;
              } else {
-                 daHTML += `<tr><td style="color:#444">-</td><td style="color:#444">-</td><td style="color:#444">READY/MAX</td></tr>`;
+                 daHTML += `<tr><td style="color:var(--text-muted)">-</td><td style="text-align:right; color:var(--text-muted)">-</td><td style="text-align:right; color:var(--text-muted)">MAXED</td></tr>`;
              }
         }
         document.getElementById("deckAdvisorData").innerHTML = daHTML + `</table>`;
 
 
-        // --- ACCOUNT ADVISOR ALGORITHM v23.4 (Smart Flow Update) ---
+        // --- ACCOUNT ADVISOR ALGORITHM (تم إصلاح المتغيرات هنا) ---
         const isEpicSunday = (new Date().getDay() === 0);
         const getScore = (r) => { 
             let next = r.actualLvl + 1; 
@@ -338,72 +376,83 @@ async function startAnalysis() {
             let req = CARD_LADDER[r.rarityKey][next]; 
             return req ? (r.stock / req) : 0; 
         };
-        
         let permittedRarities = isEpicSunday ? ["common", "rare", "epic"] : ["common", "rare"];
+        
         let targetLevel = lowestLvl;
         let reqList = [];
 
         for (let l = lowestLvl; l < MAX_LEVEL; l++) {
-            let potentialCards = globalResults.filter(r => 
-                r.status !== "Not Owned" && 
-                r.actualLvl === l && 
-                permittedRarities.includes(r.rarityKey) && 
-                getScore(r) < 1 
-            );
-
+            let potentialCards = globalResults.filter(r => r.status !== "Not Owned" && r.actualLvl === l && permittedRarities.includes(r.rarityKey) && getScore(r) < 1);
             if (potentialCards.length > 0) {
                 targetLevel = l;
                 potentialCards.sort((a, b) => getScore(b) - getScore(a));
-                
                 if (isEpicSunday) {
                     let sundayEpic = potentialCards.find(r => r.rarityKey === "epic");
-                    if (sundayEpic) {
-                        reqList.push(sundayEpic);
-                        potentialCards = potentialCards.filter(r => r.id !== sundayEpic.id);
-                    }
+                    if (sundayEpic) { reqList.push(sundayEpic); potentialCards = potentialCards.filter(r => r.id !== sundayEpic.id); }
                 }
-
-                while(reqList.length < 3 && potentialCards.length > 0) {
-                    reqList.push(potentialCards.shift());
-                }
+                while(reqList.length < 3 && potentialCards.length > 0) { reqList.push(potentialCards.shift()); }
                 break; 
             }
         }
         
-        let titleColor = isEpicSunday ? '#9b59b6' : '#3498db';
+        let titleColor = isEpicSunday ? 'var(--accent-purple)' : 'var(--accent-blue)';
         let advHTML = `
-            <div class="tooltip-container" style="display:block; text-align:center;">
-                <h3 style="color:${titleColor}; margin-bottom:10px;">🛒 ACCOUNT ADVISOR (LVL ${targetLevel}+) <span class="tooltip-icon" style="font-size:10px;">❓<span class="tooltip-text" style="width:220px; margin-left:-110px;">Finds the lowest level cards that still need copies from the clan.</span></span></h3>
-            </div>
-            <table class="info-table"><tr><th>Card</th><th>Rarity</th><th>Stock</th><th>Ready %</th></tr>`;
-        
+            <h3 style="color:${titleColor};"><i class="fa-solid fa-lightbulb"></i> Account Advisor 
+                <div class="tooltip-container"><i class="fa-solid fa-circle-info tooltip-icon"></i><span class="tooltip-text">Finds lowest level cards needing copies from clan.</span></div>
+            </h3>
+            <table class="info-table"><tr><th style="text-align:left; color:var(--text-muted); font-size:10px;">CARD</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">STOCK</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">READY %</th></tr>`;
         for(let i=0; i<3; i++) {
             if(reqList[i]) { 
-                let color = reqList[i].rarityKey === "epic" ? "#9b59b6" : (reqList[i].rarityKey === "rare" ? "#f39c12" : "#3498db"); 
-                advHTML += `<tr><td class="card-cell"><img src="${reqList[i].imgUrl}" class="card-img" onerror="this.style.display='none'"> <span>${reqList[i].cleanName}</span></td><td style="color:${color}; text-transform:capitalize;">${reqList[i].rarity}</td><td>${reqList[i].stock}</td><td class="green-text">${(getScore(reqList[i])*100).toFixed(1)}%</td></tr>`; 
+                advHTML += `<tr><td class="card-cell" style="min-width:auto; gap:8px;"><img src="${reqList[i].imgUrl}" class="card-img" style="width:24px; height:28px;" onerror="this.style.display='none'"> <span>${reqList[i].cleanName}</span></td><td style="text-align:right;">${reqList[i].stock}</td><td style="text-align:right;" class="green-text">${(getScore(reqList[i])*100).toFixed(1)}%</td></tr>`; 
             } else { 
-                advHTML += `<tr><td style="color:#444">-</td><td style="color:#444">-</td><td style="color:#444">-</td><td style="color:#444">READY</td></tr>`; 
+                advHTML += `<tr><td style="color:var(--text-muted)">-</td><td style="text-align:right; color:var(--text-muted)">-</td><td style="text-align:right; color:var(--text-muted)">READY</td></tr>`; 
             }
         }
         document.getElementById("advisorData").innerHTML = advHTML + `</table>`;
 
-        Chart.defaults.color = '#ccc';
+        // Level Distribution Bar Chart
+        let labelsLevel = [];
+        let dataLevel = [];
+        for (let i = 1; i <= 16; i++) {
+            if (i >= Math.min(globalMinLevel, 10) || levelCounts[i] > 0) {
+                labelsLevel.push("Lvl " + i);
+                dataLevel.push(levelCounts[i]);
+            }
+        }
+        if(chartLevels) chartLevels.destroy();
+        chartLevels = new Chart(document.getElementById('levelChart'), {
+            type: 'bar',
+            data: {
+                labels: labelsLevel,
+                datasets: [{ label: 'Cards', data: dataLevel, backgroundColor: '#3b82f6', borderRadius: 4 }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { ticks: { color: '#a1a1aa' }, grid: { color: '#27272a' } },
+                    x: { ticks: { color: '#a1a1aa' }, grid: { display: false } }
+                }
+            }
+        });
+
+        // Charts update
         if(chartGold) chartGold.destroy();
-        chartGold = new Chart(document.getElementById('goldChart'), { type: 'pie', data: { labels: ['Invested Gold', 'Remaining Gold'], datasets: [{ data: [spent, rem], backgroundColor: ['#2ecc71', '#e74c3c'], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { title: { display: true, text: 'Gold Progress' } } } });
+        chartGold = new Chart(document.getElementById('goldChart'), { type: 'pie', data: { labels: ['Invested Gold', 'Remaining Gold'], datasets: [{ data: [spent, rem], backgroundColor: ['#facc15', '#27272a'], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { title: { display: true, text: 'Gold Progress', color: '#f4f4f5' }, legend: { labels: {color: '#a1a1aa'} } } } });
         if(chartCards) chartCards.destroy();
-        chartCards = new Chart(document.getElementById('cardsChart'), { type: 'doughnut', data: { labels: ['Collected', 'Missing Common', 'Missing Rare', 'Missing Epic', 'Missing Leg.', 'Missing Champ.'], datasets: [{ data: [cardCollTotal, missingByRarity.common, missingByRarity.rare, missingByRarity.epic, missingByRarity.legendary, missingByRarity.champion], backgroundColor: ['#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#00cec9', '#f1c40f'], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { title: { display: true, text: 'Card Collection Spectrum' } }, cutout: '50%' } });
+        chartCards = new Chart(document.getElementById('cardsChart'), { type: 'doughnut', data: { labels: ['Collected', 'Miss Common', 'Miss Rare', 'Miss Epic', 'Miss Leg.', 'Miss Champ.'], datasets: [{ data: [cardCollTotal, missingByRarity.common, missingByRarity.rare, missingByRarity.epic, missingByRarity.legendary, missingByRarity.champion], backgroundColor: ['#22c55e', '#94a3b8', '#f97316', '#a855f7', '#06b6d4', '#facc15'], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { title: { display: true, text: 'Card Collection Spectrum', color: '#f4f4f5' }, legend: { display: false } }, cutout: '60%' } });
         if(chartXp) chartXp.destroy();
-        chartXp = new Chart(document.getElementById('xpChart'), { type: 'doughnut', data: { labels: ['Earned XP', 'Remaining XP'], datasets: [{ data: [playerTotalXp, totalXpToMax], backgroundColor: ['#8e44ad', '#ecf0f1'], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { title: { display: true, text: "King's Journey XP" } }, cutout: '50%' } });
+        chartXp = new Chart(document.getElementById('xpChart'), { type: 'doughnut', data: { labels: ['Earned XP', 'Remaining XP'], datasets: [{ data: [playerTotalXp, totalXpToMax], backgroundColor: ['#3b82f6', '#27272a'], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { title: { display: true, text: "King's Journey XP", color: '#f4f4f5' }, legend: { labels: {color: '#a1a1aa'} } }, cutout: '60%' } });
 
         renderMainTable();
-        statusMsg.innerText = "✅ Analysis Complete!";
-        statusMsg.style.color = "#2ecc71";
+        statusMsg.innerHTML = `<i class="fa-solid fa-circle-check"></i> Analysis Complete!`;
+        statusMsg.style.color = "var(--accent-green)";
         dash.style.opacity = "1"; 
         openTab('overview'); 
     } catch (error) {
         console.error(error);
-        statusMsg.innerText = "❌ Error: " + error.message;
-        statusMsg.style.color = "#e74c3c";
+        statusMsg.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Error: ` + error.message;
+        statusMsg.style.color = "var(--accent-red)";
         dash.classList.add("hidden"); 
     }
 }
@@ -438,7 +487,7 @@ function renderMainTable() {
     });
 
     const startTargetLvl = Math.min(globalMinLevel + 1, MAX_LEVEL);
-    let tableHTML = `<thead><tr><th class="text-left">Card Name</th><th>Rarity</th><th>Level</th><th>Stock</th><th>% Next</th><th>% Max</th>`;
+    let tableHTML = `<thead><tr><th style="text-align:left;">Card Name</th><th>Rarity</th><th>Level</th><th>Stock</th><th>% Next</th><th>% Max</th>`;
     for (let i = startTargetLvl; i <= MAX_LEVEL; i++) tableHTML += `<th>To Lvl ${i}</th>`;
     tableHTML += `<th>Gold Spent</th><th>Gold Rem</th></tr></thead><tbody>`;
 
@@ -450,16 +499,16 @@ function renderMainTable() {
         let newCategoryKey = "";
         let shouldPrintLabel = false;
         let labelText = "";
-        let labelColor = "#fff";
+        let labelColor = "var(--text-main)";
 
         if (currentActiveFilter === 'all') {
             newCategoryKey = r.isTower ? "all_towers" : r.rarityKey;
             if (newCategoryKey !== currentCategoryKey) {
                 shouldPrintLabel = true;
-                if (newCategoryKey === "all_towers") { labelText = "TOWER TROOPS"; labelColor = "#e74c3c"; }
-                else if (r.rarityKey === "champion") { labelText = "CHAMPIONS"; labelColor = "#f1c40f"; }
+                if (newCategoryKey === "all_towers") { labelText = "TOWER TROOPS"; labelColor = "var(--accent-red)"; }
+                else if (r.rarityKey === "champion") { labelText = "CHAMPIONS"; labelColor = "var(--accent-gold)"; }
                 else if (r.rarityKey === "legendary") { labelText = "LEGENDARY"; labelColor = "#00cec9"; }
-                else if (r.rarityKey === "epic") { labelText = "EPIC"; labelColor = "#9b59b6"; }
+                else if (r.rarityKey === "epic") { labelText = "EPIC"; labelColor = "var(--accent-purple)"; }
                 else if (r.rarityKey === "rare") { labelText = "RARE"; labelColor = "#e67e22"; }
                 else if (r.rarityKey === "common") { labelText = "COMMON"; labelColor = "#bdc3c7"; }
             }
@@ -471,39 +520,39 @@ function renderMainTable() {
                 shouldPrintLabel = true;
                 let rarityDisplay = r.rarity.toUpperCase();
                 labelText = r.isTower ? `${rarityDisplay} TOWERS` : `${rarityDisplay} TROOPS & SPELLS`;
-                if (r.rarityKey === "champion") labelColor = "#f1c40f";
+                if (r.rarityKey === "champion") labelColor = "var(--accent-gold)";
                 else if (r.rarityKey === "legendary") labelColor = "#00cec9";
-                else if (r.rarityKey === "epic") labelColor = "#9b59b6";
+                else if (r.rarityKey === "epic") labelColor = "var(--accent-purple)";
                 else if (r.rarityKey === "rare") labelColor = "#e67e22";
                 else if (r.rarityKey === "common") labelColor = "#bdc3c7";
-                if (r.isTower) labelColor = "#e74c3c"; 
+                if (r.isTower) labelColor = "var(--accent-red)"; 
             }
         }
 
         if (shouldPrintLabel && labelText !== "") {
-            tableHTML += `<tr class="table-separator" style="background-color: #111 !important;"><td colspan="${colSpanCount}" style="color: ${labelColor}; padding: 10px !important;">▬▬▬ ${labelText} ▬▬▬</td></tr>`;
+            tableHTML += `<tr class="table-separator"><td colspan="${colSpanCount}" style="border-left: 4px solid ${labelColor};"><i class="fa-solid fa-layer-group" style="margin-right:8px;"></i> ${labelText}</td></tr>`;
             currentCategoryKey = newCategoryKey; 
         } else if (currentActiveFilter !== 'all') {
             currentCategoryKey = newCategoryKey;
         }
 
-        let rowStyle = (r.actualLvl === MAX_LEVEL) ? "style='color:#f1c40f; font-weight:bold;'" : "";
-        let rarityColor = r.rarityKey==='epic' ? '#9b59b6' : r.rarityKey==='legendary' ? '#00cec9' : r.rarityKey==='champion' ? '#f1c40f' : r.rarityKey==='rare' ? '#e67e22' : '#bdc3c7';
+        let rowStyle = (r.actualLvl === MAX_LEVEL) ? "style='color:var(--accent-gold); font-weight:700;'" : "";
+        let rarityColor = r.rarityKey==='epic' ? 'var(--accent-purple)' : r.rarityKey==='legendary' ? '#00cec9' : r.rarityKey==='champion' ? 'var(--accent-gold)' : r.rarityKey==='rare' ? '#e67e22' : '#bdc3c7';
         let isLockedClass = (r.status === "Not Owned") ? "locked-card" : "";
         let displayPctNext = r.status === "Not Owned" ? "-" : (r.pctToNext * 100).toFixed(1) + "%";
         let pctColorClass = (r.pctToNext >= 1 && r.status !== "Not Owned") ? "green-text" : "";
 
         tableHTML += `<tr ${rowStyle} data-rarity="${r.rarityKey}" data-istower="${r.isTower}">
             <td class="card-cell ${isLockedClass}"><img src="${r.imgUrl}" class="card-img" onerror="this.style.display='none'"> <span>${r.cleanName}</span></td>
-            <td style="text-transform: capitalize; color: ${rarityColor}; font-weight:bold;" class="${isLockedClass}">${r.rarity}</td>
+            <td style="text-transform: capitalize; color: ${rarityColor}; font-weight:700;" class="${isLockedClass}">${r.rarity}</td>
             <td class="${isLockedClass}">${r.status}</td>
             <td class="${isLockedClass}">${r.stock.toLocaleString()}</td>
             <td class="${pctColorClass} ${isLockedClass}">${displayPctNext}</td>
             <td class="${isLockedClass}">${(r.pctToMax * 100).toFixed(1)}%</td>`;
         for (let i = startTargetLvl; i <= MAX_LEVEL; i++) {
             let missing = r.missingLevels[i] || 0;
-            if (r.actualLvl >= i) tableHTML += `<td style="color:#555" class="${isLockedClass}">-</td>`;
-            else if (missing === 0) tableHTML += `<td class="${isLockedClass}">✅</td>`;
+            if (r.actualLvl >= i) tableHTML += `<td style="color:var(--text-muted)" class="${isLockedClass}">-</td>`;
+            else if (missing === 0) tableHTML += `<td class="${isLockedClass}"><i class="fa-solid fa-check" style="color:var(--accent-green)"></i></td>`;
             else tableHTML += `<td class="red-text ${isLockedClass}">${missing.toLocaleString()}</td>`;
         }
         tableHTML += `<td class="green-text ${isLockedClass}">${r.spent.toLocaleString()}</td><td class="gold-text ${isLockedClass}">${r.rem.toLocaleString()}</td></tr>`;
