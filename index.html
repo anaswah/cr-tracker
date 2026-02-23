@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CR Tracker Pro</title>
     <meta name="google" content="notranslate">
+    <title>CR Tracker Pro</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -19,7 +19,7 @@
         <p style="text-align:center; color:var(--text-muted); margin-top:-20px; margin-bottom:30px; font-size:0.9rem;">Advanced Analytics & Upgrade Advisor for Clash Royale</p>
         
         <div class="search-box">
-            <input type="text" id="playerTag" placeholder="Enter Player Tag" list="tagHistory" autocomplete="off">
+            <input type="text" id="playerTag" placeholder="Enter Player Tag (e.g. 2RG9P9Y)" list="tagHistory" autocomplete="off">
             <datalist id="tagHistory"></datalist>
             <button onclick="startAnalysis()"><i class="fa-solid fa-magnifying-glass"></i> Analyze</button>
         </div>
@@ -42,7 +42,8 @@
                     <div class="info-box" id="collectionBox"></div>
                 </div>
 
-                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                    <div class="info-box chart-container"><canvas id="winLossChart"></canvas></div>
                     <div class="info-box chart-container"><canvas id="goldChart"></canvas></div>
                     <div class="info-box chart-container"><canvas id="cardsChart"></canvas></div>
                     <div class="info-box chart-container"><canvas id="xpChart"></canvas></div>
@@ -59,7 +60,7 @@
                 </div>
 
                 <h2 class="section-title"><i class="fa-solid fa-microchip"></i> Command Center</h2>
-                <p class="section-desc">AI-powered recommendations to maximize your account progression and optimize your main battle deck.</p>
+                <p class="section-desc">Data-driven recommendations to maximize your account progression and optimize your main battle deck.</p>
                 
                 <div class="stats-grid">
                     <div class="info-box">
@@ -114,4 +115,3 @@
     <script src="app.js"></script>
 </body>
 </html>
-
