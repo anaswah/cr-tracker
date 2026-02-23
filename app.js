@@ -1,5 +1,5 @@
 /**
- * Clash Royale Web Engine v25.1 - Final Pro Update
+ * Clash Royale Web Engine v25.3 - Epic Sunday UI + LVL Column Fixed
  * Engineered for M7amd 3naswah
  */
 
@@ -66,7 +66,7 @@ function filterCards(filterType) {
     currentActiveFilter = filterType;
     renderMainTable(); 
     
-    // السطر السحري: إرجاع الجدول للأعلى عند تغيير الفلتر
+    // إرجاع الجدول للأعلى عند تغيير الفلتر
     let tableContainer = document.querySelector('.table-container');
     if (tableContainer) {
         tableContainer.scrollTop = 0;
@@ -153,7 +153,6 @@ async function startAnalysis() {
         let rarityStats = { "common": {gs:0, gr:0, cs:0, ct:0}, "rare": {gs:0, gr:0, cs:0, ct:0}, "epic": {gs:0, gr:0, cs:0, ct:0}, "legendary": {gs:0, gr:0, cs:0, ct:0}, "champion": {gs:0, gr:0, cs:0, ct:0} };
         let towerS = 0, towerR = 0, towerCS = 0, towerCT = 0;
         
-        // Count for level distribution chart
         let levelCounts = Array(17).fill(0);
 
         globalResults = gCards.map(gCard => {
@@ -250,7 +249,6 @@ async function startAnalysis() {
         let instantXP = 0, instantGold = 0, instantNames = [], xpNeededB = xpNeededForNext;
         for (let c of readyCards) { if (xpNeededB <= 0) break; instantXP += c.nextXp; instantGold += c.nextGold; instantNames.push(`${c.cleanName}(${c.actualLvl + 1})`); xpNeededB -= c.nextXp; }
         
-        // تم إصلاح الأقواس في هذا السطر هنا:
         let instantPlanStr = isMaxLevelKing ? "Maxed!" : (instantXP >= xpNeededForNext ? (instantNames.length > 2 ? `${instantNames.slice(0, 2).join(", ")} +${instantNames.length - 2} more (${(instantGold/1000).toFixed(1)}k Gold)` : `${instantNames.join(", ")} (${(instantGold/1000).toFixed(1)}k Gold)`) : (instantXP > 0 ? `All ready give ${instantXP}XP. Not enough.` : "No ready cards."));
 
         // UI Updates
@@ -316,26 +314,21 @@ async function startAnalysis() {
         if(pData.currentDeckSupportCards) pData.currentDeckSupportCards.forEach(c => deckIDs.add(c.id));
 
         let myDeckCards = globalResults.filter(r => deckIDs.has(r.id));
-        
         let deckGoldNeeded = 0;
         myDeckCards.forEach(c => deckGoldNeeded += c.rem);
         
         const isEpicSundayDeck = (new Date().getDay() === 0);
         let permittedDeckRarities = isEpicSundayDeck ? ["common", "rare", "epic"] : ["common", "rare"];
 
+        // الخوارزمية المعدلة لمستشار التشكيلة (لإجبار الإيبيك يوم الأحد)
         let deckPriority = myDeckCards.filter(c => 
             c.actualLvl < MAX_LEVEL && permittedDeckRarities.includes(c.rarityKey) && c.pctToNext < 1
         ).sort((a,b) => {
-            // الشرط الذهبي الجديد: تثبيت بطاقة الإيبيك في المركز الأول يوم الأحد!
             if (isEpicSundayDeck) {
                 if (a.rarityKey === 'epic' && b.rarityKey !== 'epic') return -1;
                 if (b.rarityKey === 'epic' && a.rarityKey !== 'epic') return 1;
             }
-            
-            // الشرط الثاني: الأولوية للبطاقة ذات اللفل الأقل
             if (a.actualLvl !== b.actualLvl) return a.actualLvl - b.actualLvl;
-            
-            // الشرط الثالث: الترتيب حسب نسبة الجاهزية (الأقرب للاكتمال)
             return b.pctToNext - a.pctToNext;
         });
         
@@ -351,24 +344,36 @@ async function startAnalysis() {
         deckHTML += `</div>`;
         document.getElementById("deckData").innerHTML = deckHTML;
 
+        // طباعة صندوق مستشار التشكيلة (مع تأثير يوم الأحد)
+        let deckAdvisorBox = document.getElementById("deckAdvisorData");
+        deckAdvisorBox.className = isEpicSundayDeck ? "info-box epic-sunday-glow" : "info-box";
+
+        let daTitleColor = isEpicSundayDeck ? 'var(--accent-purple)' : 'var(--accent-red)';
         let daHTML = `
-            <h3 style="color:var(--accent-red);"><i class="fa-solid fa-crosshairs"></i> Deck Advisor 
+            <h3 style="color:${daTitleColor};"><i class="fa-solid fa-crosshairs"></i> Deck Advisor 
                 <div class="tooltip-container"><i class="fa-solid fa-circle-info tooltip-icon"></i><span class="tooltip-text">Clan request priority. Respects Epic Sunday!</span></div>
-            </h3>
-            <table class="info-table"><tr><th style="text-align:left; color:var(--text-muted); font-size:10px;">CARD</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">NEEDED</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">READY %</th></tr>`;
+            </h3>`;
+            
+        if (isEpicSundayDeck) {
+            daHTML += `<div class="epic-badge"><i class="fa-solid fa-wand-magic-sparkles"></i> Epic Sunday: Prioritizing Epic Cards!</div>`;
+        }
+
+        // إضافة عامود LVL لجدول Deck Advisor
+        daHTML += `<table class="info-table"><tr><th style="text-align:left; color:var(--text-muted); font-size:10px;">CARD</th><th style="text-align:center; color:var(--text-muted); font-size:10px;">LVL</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">NEEDED</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">READY %</th></tr>`;
         for(let i=0; i<3; i++) {
              if(deckPriority[i]) {
                  daHTML += `<tr><td class="card-cell" style="min-width:auto; gap:8px;"><img src="${deckPriority[i].imgUrl}" class="card-img" style="width:24px; height:28px;"> <span>${deckPriority[i].cleanName}</span></td>
+                 <td style="text-align:center;">${deckPriority[i].actualLvl}</td>
                  <td style="text-align:right;" class="gold-text">${deckPriority[i].rem > 0 ? (deckPriority[i].rem/1000).toFixed(0)+'k' : 'Cards'}</td>
                  <td style="text-align:right;" class="green-text">${(deckPriority[i].pctToNext*100).toFixed(1)}%</td></tr>`;
              } else {
-                 daHTML += `<tr><td style="color:var(--text-muted)">-</td><td style="text-align:right; color:var(--text-muted)">-</td><td style="text-align:right; color:var(--text-muted)">MAXED</td></tr>`;
+                 daHTML += `<tr><td style="color:var(--text-muted)">-</td><td style="text-align:center; color:var(--text-muted)">-</td><td style="text-align:right; color:var(--text-muted)">-</td><td style="text-align:right; color:var(--text-muted)">MAXED</td></tr>`;
              }
         }
-        document.getElementById("deckAdvisorData").innerHTML = daHTML + `</table>`;
+        deckAdvisorBox.innerHTML = daHTML + `</table>`;
 
 
-        // --- ACCOUNT ADVISOR ALGORITHM (تم إصلاح المتغيرات هنا) ---
+        // --- ACCOUNT ADVISOR ALGORITHM ---
         const isEpicSunday = (new Date().getDay() === 0);
         const getScore = (r) => { 
             let next = r.actualLvl + 1; 
@@ -395,20 +400,33 @@ async function startAnalysis() {
             }
         }
         
+        // طباعة صندوق المستشار العام (مع تأثير يوم الأحد)
+        let accountAdvisorBox = document.getElementById("advisorData");
+        accountAdvisorBox.className = isEpicSunday ? "info-box epic-sunday-glow" : "info-box";
+
         let titleColor = isEpicSunday ? 'var(--accent-purple)' : 'var(--accent-blue)';
         let advHTML = `
             <h3 style="color:${titleColor};"><i class="fa-solid fa-lightbulb"></i> Account Advisor 
                 <div class="tooltip-container"><i class="fa-solid fa-circle-info tooltip-icon"></i><span class="tooltip-text">Finds lowest level cards needing copies from clan.</span></div>
-            </h3>
-            <table class="info-table"><tr><th style="text-align:left; color:var(--text-muted); font-size:10px;">CARD</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">STOCK</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">READY %</th></tr>`;
+            </h3>`;
+            
+        if (isEpicSunday) {
+            advHTML += `<div class="epic-badge"><i class="fa-solid fa-wand-magic-sparkles"></i> Epic Sunday: Prioritizing Epic Cards!</div>`;
+        }
+
+        // إضافة عامود LVL لجدول Account Advisor
+        advHTML += `<table class="info-table"><tr><th style="text-align:left; color:var(--text-muted); font-size:10px;">CARD</th><th style="text-align:center; color:var(--text-muted); font-size:10px;">LVL</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">STOCK</th><th style="text-align:right; color:var(--text-muted); font-size:10px;">READY %</th></tr>`;
         for(let i=0; i<3; i++) {
             if(reqList[i]) { 
-                advHTML += `<tr><td class="card-cell" style="min-width:auto; gap:8px;"><img src="${reqList[i].imgUrl}" class="card-img" style="width:24px; height:28px;" onerror="this.style.display='none'"> <span>${reqList[i].cleanName}</span></td><td style="text-align:right;">${reqList[i].stock}</td><td style="text-align:right;" class="green-text">${(getScore(reqList[i])*100).toFixed(1)}%</td></tr>`; 
+                advHTML += `<tr><td class="card-cell" style="min-width:auto; gap:8px;"><img src="${reqList[i].imgUrl}" class="card-img" style="width:24px; height:28px;" onerror="this.style.display='none'"> <span>${reqList[i].cleanName}</span></td>
+                <td style="text-align:center;">${reqList[i].actualLvl}</td>
+                <td style="text-align:right;">${reqList[i].stock}</td>
+                <td style="text-align:right;" class="green-text">${(getScore(reqList[i])*100).toFixed(1)}%</td></tr>`; 
             } else { 
-                advHTML += `<tr><td style="color:var(--text-muted)">-</td><td style="text-align:right; color:var(--text-muted)">-</td><td style="text-align:right; color:var(--text-muted)">READY</td></tr>`; 
+                advHTML += `<tr><td style="color:var(--text-muted)">-</td><td style="text-align:center; color:var(--text-muted)">-</td><td style="text-align:right; color:var(--text-muted)">-</td><td style="text-align:right; color:var(--text-muted)">READY</td></tr>`; 
             }
         }
-        document.getElementById("advisorData").innerHTML = advHTML + `</table>`;
+        accountAdvisorBox.innerHTML = advHTML + `</table>`;
 
         // Level Distribution Bar Chart
         let labelsLevel = [];
