@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,26 +13,36 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
     <div class="background-glow"></div>
     <div class="container">
-        <h1 class="logo-title"><i class="fa-solid fa-crown" style="color:var(--accent-gold);"></i>CR <span>Tracker Pro</span></h1>
-        <p style="text-align:center; color:var(--text-muted); margin-top:-20px; margin-bottom:30px; font-size:0.9rem;">Advanced Analytics & Upgrade Advisor for Clash Royale</p>
-        
+        <h1 class="logo-title"><i class="fa-solid fa-crown" style="color:var(--accent-gold);"></i>CR <span>Tracker
+                Pro</span></h1>
+        <p style="text-align:center; color:var(--text-muted); margin-top:-20px; margin-bottom:30px; font-size:0.9rem;">
+            Advanced Analytics & Upgrade Advisor for Clash Royale</p>
+
         <div class="search-box">
-            <input type="text" id="playerTag" placeholder="Enter Player Tag (e.g. 2RG9P9Y)" list="tagHistory" autocomplete="off">
+            <input type="text" id="playerTag" placeholder="Enter Player Tag (e.g. 2RG9P9Y)" list="tagHistory"
+                autocomplete="off">
             <datalist id="tagHistory"></datalist>
             <button onclick="startAnalysis()"><i class="fa-solid fa-magnifying-glass"></i> Analyze</button>
         </div>
-        
+
         <div id="statusMessage" class="status-msg"></div>
 
         <div id="dashboard" class="hidden">
-            <h2 id="playerGreeting" style="text-align: center; margin-bottom: 25px; font-weight: 800; font-size: 1.8rem; letter-spacing: -0.5px;"></h2>
-            
+            <h2 id="playerGreeting"
+                style="text-align: center; margin-bottom: 25px; font-weight: 800; font-size: 1.8rem; letter-spacing: -0.5px;">
+            </h2>
+
             <div class="tab-container">
-                <button class="tab-btn active" onclick="openTab('overview')"><i class="fa-solid fa-chart-line"></i> Overview</button>
-                <button class="tab-btn" onclick="openTab('mainTable')"><i class="fa-solid fa-database"></i> Card Database</button>
+                <button class="tab-btn active" onclick="openTab('overview')"><i class="fa-solid fa-chart-line"></i>
+                    Overview</button>
+                <button class="tab-btn" onclick="openTab('mainTable')"><i class="fa-solid fa-database"></i> Card
+                    Database</button>
+                <button class="tab-btn" onclick="openTab('aiLab')"><i class="fa-solid fa-flask"></i> AI Lab (Full
+                    Audit)</button>
             </div>
 
             <div id="overview" class="tab-content active">
@@ -42,15 +53,26 @@
                     <div class="info-box" id="collectionBox"></div>
                 </div>
 
+                <div class="stats-grid" style="grid-template-columns: 1fr;">
+                    <div class="info-box" id="progressionMatrix"
+                        style="box-shadow: 0 0 15px rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3);">
+                    </div>
+                </div>
+
                 <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
                     <div class="info-box chart-container"><canvas id="winLossChart"></canvas></div>
                     <div class="info-box chart-container"><canvas id="goldChart"></canvas></div>
                     <div class="info-box chart-container"><canvas id="cardsChart"></canvas></div>
-                    <div class="info-box chart-container"><canvas id="xpChart"></canvas></div>
+                    <div class="info-box chart-container"
+                        style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 250px;"
+                        id="bestDeckContainer">
+                        <div style="text-align:center; color:#71717a; font-size:12px;">Waiting for analysis...</div>
+                    </div>
                 </div>
 
                 <h2 class="section-title"><i class="fa-solid fa-layer-group"></i> Level Distribution</h2>
-                <p class="section-desc">A visual breakdown of how your card collection is distributed across different levels.</p>
+                <p class="section-desc">A visual breakdown of how your card collection is distributed across different
+                    levels.</p>
                 <div class="stats-grid" style="grid-template-columns: 1fr;">
                     <div class="info-box chart-container" style="height: 250px;"><canvas id="levelChart"></canvas></div>
                 </div>
@@ -60,9 +82,78 @@
                 </div>
 
                 <h2 class="section-title"><i class="fa-solid fa-microchip"></i> Command Center</h2>
-                <p class="section-desc">Data-driven recommendations to maximize your account progression and optimize your main battle deck.</p>
-                
+                <p class="section-desc">Data-driven recommendations to maximize your account progression and optimize
+                    your main battle deck.</p>
+
+                <!-- 🔥 AI Holistic Balancer 🔥 -->
+                <div class="info-box"
+                    style="border: 1px solid var(--accent-purple); box-shadow: 0 0 15px rgba(168, 85, 247, 0.15); margin-top: 25px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <h3 style="color:var(--accent-purple); margin:0;"><i class="fa-solid fa-brain"></i> AI Holistic
+                            Balancer</h3>
+
+                        <div style="display:flex; gap:15px; align-items: center; flex-wrap: wrap;">
+                            <!-- زر تضمين الأبراج -->
+                            <label
+                                style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text-muted); cursor:pointer;">
+                                <input type="checkbox" id="aiIncludeTowers" style="accent-color: var(--accent-purple);">
+                                Include Tower Troops
+                            </label>
+
+                            <!-- الميزانية والتشغيل -->
+                            <div style="display:flex; gap:5px; align-items: center;">
+                                <span style="font-size: 12px; color: var(--text-muted);">Budget:</span>
+                                <input type="number" id="aiBudgetInput" placeholder="e.g. 50000"
+                                    style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: var(--accent-gold); padding: 5px 10px; border-radius: 4px; width: 100px; font-weight: bold; outline: none;">
+                                <button onclick="calculateHolisticAI()"
+                                    style="background: var(--accent-purple); color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s;"><i
+                                        class="fa-solid fa-calculator"></i> Run AI</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- إشعار الإدارة الخفي للبطاقات غير المصنفة -->
+                    <div id="aiAdminAlert"
+                        style="display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid var(--accent-red); color: #fca5a5; padding: 10px; border-radius: 6px; margin-top: 15px; font-size: 12px;">
+                        <strong><i class="fa-solid fa-triangle-exclamation"></i> ADMIN ALERT:</strong> Unclassified
+                        cards detected: <span id="aiUnclassifiedList" style="font-weight:bold; color:white;"></span>.
+                    </div>
+
+                    <div id="aiHolisticResults" style="margin-top: 20px;">
+                        <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px;">
+                            <i class="fa-solid fa-robot"
+                                style="font-size: 24px; margin-bottom:10px; opacity: 0.5;"></i><br>
+                            Enter your gold budget and run the AI to get the ultimate balanced upgrade recommendation.
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- القسم الأول: أولوية التشكيلة الأساسية -->
+                <h3
+                    style="color: var(--text-main); margin: 30px 0 15px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; font-size: 1.2rem;">
+                    <i class="fa-solid fa-crosshairs" style="color: var(--accent-red);"></i> Main Deck Focus
+                </h3>
                 <div class="stats-grid">
+                    <!-- صندوق معلومات التشكيلة -->
+                    <div class="info-box box-highlight">
+                        <h3 style="color:var(--accent-red);"><i class="fa-solid fa-swords"></i> Battle Deck Elite</h3>
+                        <div id="deckData"></div>
+                    </div>
+
+                    <!-- صندوق مستشار التشكيلة (طلبات الكلان للتشكيلة) -->
+                    <div class="info-box" id="deckAdvisorData"></div>
+                </div>
+
+                <!-- القسم الثاني: محرك الحساب والخبرة -->
+                <h3
+                    style="color: var(--text-main); margin: 40px 0 15px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; font-size: 1.2rem;">
+                    <i class="fa-solid fa-layer-group" style="color: var(--accent-blue);"></i> Collection & XP Engine
+                </h3>
+                <div class="stats-grid">
+                    <!-- صندوق خطة رفع أضعف البطاقات -->
                     <div class="info-box">
                         <h3 style="color:var(--accent-blue);"><i class="fa-solid fa-hammer"></i> Account Builder</h3>
                         <div id="strategyData"></div>
@@ -72,25 +163,24 @@
                         </div>
                     </div>
 
-                    <div class="info-box box-highlight">
-                        <h3 style="color:var(--accent-red);"><i class="fa-solid fa-swords"></i> Battle Deck Elite</h3>
-                        <div id="deckData"></div>
-                    </div>
+                    <!-- صندوق مستشار الحساب (طلبات الكلان للحساب) -->
+                    <div class="info-box" id="advisorData"></div>
                 </div>
 
                 <div class="stats-grid">
-                    <div class="info-box" id="advisorData"></div>
-                    <div class="info-box" id="deckAdvisorData"></div>
-                </div>
-                
-                <div class="stats-grid">
-                     <div class="info-box" id="topUpgradesData"></div>
-                     <div class="info-box">
+                    <!-- صندوق أقرب البطاقات للاكتمال -->
+                    <div class="info-box" id="topUpgradesData"></div>
+
+                    <!-- صندوق أرخص البطاقات للترقية (بنك الخبرة) -->
+                    <div class="info-box">
                         <h3 style="color:var(--accent-purple);"><i class="fa-solid fa-bolt"></i> Instant XP Bank</h3>
-                        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Cards you can upgrade right now to gain XP instantly.</p>
+                        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Cards you can upgrade
+                            right now to gain XP instantly.</p>
                         <div class="alert-banner instant">
-                            <strong style="justify-content:center;"><i class="fa-solid fa-coins"></i> Ready to Upgrade</strong>
-                            <span id="instantPlanText" class="gold-text" style="font-weight:bold; font-size: 1.1rem; display:block; margin-top:5px;"></span>
+                            <strong style="justify-content:center;"><i class="fa-solid fa-coins"></i> Ready to
+                                Upgrade</strong>
+                            <span id="instantPlanText" class="gold-text"
+                                style="font-weight:bold; font-size: 1.1rem; display:block; margin-top:5px;"></span>
                         </div>
                     </div>
                 </div>
@@ -98,20 +188,48 @@
 
             <div id="mainTable" class="tab-content">
                 <div class="filter-container">
-                    <button class="filter-btn active" onclick="filterCards('all')">All</button>
-                    <button class="filter-btn" onclick="filterCards('tower')">Towers</button>
-                    <button class="filter-btn" style="color:var(--accent-gold);" onclick="filterCards('champion')">Champions</button>
-                    <button class="filter-btn" style="color:#00cec9;" onclick="filterCards('legendary')">Legendary</button>
-                    <button class="filter-btn" style="color:#9b59b6;" onclick="filterCards('epic')">Epic</button>
-                    <button class="filter-btn" style="color:#e67e22;" onclick="filterCards('rare')">Rare</button>
-                    <button class="filter-btn" style="color:#bdc3c7;" onclick="filterCards('common')">Common</button>
+                    <button class="filter-btn active" onclick="filterCards('all', this)">All</button>
+                    <button class="filter-btn" style="color:var(--accent-gold);" onclick="filterCards('hero', this)"><i
+                            class="fa-solid fa-star"></i> Heroes</button>
+                    <button class="filter-btn" style="color:#a855f7;" onclick="filterCards('evo', this)"><i
+                            class="fa-solid fa-gem"></i> Evos</button>
+                    <button class="filter-btn" onclick="filterCards('tower', this)">Towers</button>
+                    <button class="filter-btn" style="color:var(--accent-gold);"
+                        onclick="filterCards('champion', this)">Champions</button>
+                    <button class="filter-btn" style="color:#00cec9;"
+                        onclick="filterCards('legendary', this)">Legendary</button>
+                    <button class="filter-btn" style="color:#9b59b6;" onclick="filterCards('epic', this)">Epic</button>
+                    <button class="filter-btn" style="color:#e67e22;" onclick="filterCards('rare', this)">Rare</button>
+                    <button class="filter-btn" style="color:#bdc3c7;"
+                        onclick="filterCards('common', this)">Common</button>
                 </div>
                 <div class="table-container">
                     <table class="data-table" id="mainDataTable"></table>
+                </div>
+            </div>
+            <!-- 🔥 تبويب المختبر التجريبي للذكاء الاصطناعي 🔥 -->
+            <div id="aiLab" class="tab-content">
+                <div
+                    style="background: rgba(0,0,0,0.3); border: 1px solid var(--accent-purple); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h2 style="color: var(--accent-purple); margin-top: 0;"><i class="fa-solid fa-microscope"></i> AI
+                        Holistic Laboratory</h2>
+                    <p style="color: var(--text-muted); font-size: 13px;">This is the full transparency audit. Here you
+                        can see every single card in your account ranked by the AI engine, along with a detailed
+                        breakdown of how mechanical tags, level gaps, and category weaknesses contributed to its final
+                        score.</p>
+                </div>
+
+                <!-- الصندوق اللي رح ينطبع فيه كل البطاقات -->
+                <div id="aiLabGrid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+                    <div style="text-align: center; color: var(--text-muted); grid-column: 1 / -1; padding: 40px;">
+                        Run the AI Balancer from the Command Center to populate this laboratory.
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     <script src="app.js"></script>
 </body>
+
 </html>
