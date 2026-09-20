@@ -149,10 +149,15 @@ function runAIHolisticAnalysis(globalCards, deckCardIDs, playerTag, includeTower
             reasons.push(`Stock Progress (+${readyPts})`);
         }
 
-        // 🔥 قانون مكافحة التجميد (Anti-Freeze Penalty) للندرات العالية 🔥
+        // 🔥 قانون مكافحة التجميد السياقي (Context-Aware Anti-Freeze) 🔥
         if ((c.rarityKey === "legendary" || c.rarityKey === "champion") && c.pctToNext < 0.9) {
-            score -= 10;
-            reasons.push("High Rarity Freeze Penalty (-10)");
+            if (deckCardIDs.has(c.id)) {
+                score -= 2;
+                reasons.push("Main Deck Rarity Delay (-2)");
+            } else {
+                score -= 10;
+                reasons.push("High Rarity Freeze Penalty (-10)");
+            }
         }
         // 3. التطويرات الخارقة
         if (isEvoUnlocked) { score += 20; reasons.push("Evo Unlocked (+20)"); }
@@ -289,14 +294,10 @@ function calculateHolisticAI() {
             let availableForThis = Math.max(0, currentBudget);
 
             if (!isReady) {
-                // تحديد الرسالة حسب قوانين اللعبة والندرة
-                let actionText = "Request from clan!";
-                if (card.rarityKey === "epic") actionText = "Wait for Epic Sunday!";
-                else if (card.rarityKey === "legendary" || card.rarityKey === "champion") actionText = "Use Wild Cards or Shop!";
-
+                // رسالة الحجز البسيطة بدون نصائح عمياء
                 decisionHtml = `<div style="margin-top:10px; padding:8px; background:rgba(234, 179, 8, 0.15); border-radius:4px; text-align:center; border: 1px solid #eab308;">
                     <div style="color:#eab308; font-weight:bold; font-size:13px;"><i class="fa-solid fa-hourglass-half"></i> FUND RESERVED</div>
-                    <div style="color:#d1d5db; font-size:11px; margin-top:3px;">Locked ${(upgradeCost / 1000).toFixed(0)}k. ${actionText}</div>
+                    <div style="color:#d1d5db; font-size:11px; margin-top:3px;">Locked ${(upgradeCost / 1000).toFixed(0)}k. Waiting for cards!</div>
                 </div>`;
             } else if (availableForThis >= upgradeCost) {
                 // الترقية الفورية (الفلوس اللي وصلتها بتكفي)
