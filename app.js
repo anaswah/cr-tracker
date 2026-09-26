@@ -939,14 +939,21 @@ async function startAnalysis() {
         // 3. جلب التاريخ التراكمي الكامل من السيرفر
         let historyRes = await fetch(`${PROXY_BASE}/history?tag=${tag}`);
         let totalHistoricalMatches = 0;
-        let totalHistoricalLosses = 0; // 🔥 متغير جديد لحساب إجمالي الخسائر
+        let nemesisStats = {}; // 🔥 الكائن الجديد اللي بيحسب (المواجهات) و (الخسائر) معاً
 
         if (historyRes.ok) {
             let historyData = await historyRes.json();
             totalHistoricalMatches = historyData.length;
-            totalHistoricalLosses = historyData.filter(b => !b.is_win).length; // حساب عدد الخسائر
 
             let deckHashStats = {};
+
+            // 🔥 القائمة السوداء للتعويذات الداعمة (عشان ننظف الرادار)
+            const IGNORED_SPELLS = [
+                "Arrows", "Fireball", "Zap", "The Log", "Poison",
+                "Giant Snowball", "Tornado", "Earthquake", "Barbarian Barrel",
+                "Void", "Rage", "Royal Delivery", "Skeleton Army", "Ice Spirit",
+                "Fire Spirit", "Spear Goblins", "Bats", "Electro Spirit", "Heal Spirit", "Bomber"
+            ];
 
             historyData.forEach(b => {
                 // تجميع بيانات التشكيلة الأقوى
@@ -954,16 +961,21 @@ async function startAnalysis() {
                 deckHashStats[b.deck_hash].matches++;
                 if (b.is_win) deckHashStats[b.deck_hash].wins++;
 
-                // رادار نقاط الضعف (فقط عند الخسارة)
-                if (!b.is_win) {
-                    b.opp_cards.forEach(c => {
-                        if (!nemesisCards[c.name]) nemesisCards[c.name] = { count: 0, icon: c.icon };
-                        nemesisCards[c.name].count++;
-                    });
-                }
+                // 🔥 معادلة رادار نقاط الضعف الذكية
+                b.opp_cards.forEach(c => {
+                    // إذا البطاقة موجودة بالقائمة السوداء، تجاهلها تماماً
+                    if (IGNORED_SPELLS.includes(c.name)) return;
+
+                    if (!nemesisStats[c.name]) nemesisStats[c.name] = { encounters: 0, losses: 0, icon: c.icon, name: c.name };
+                    nemesisStats[c.name].encounters++;
+
+                    if (!b.is_win) {
+                        nemesisStats[c.name].losses++;
+                    }
+                });
             });
 
-            // تتويج التشكيلة الأقوى (تم رفع الشرط إلى 5 مباريات للاستقرار)
+            // تتويج التشكيلة الأقوى
             Object.values(deckHashStats).forEach(d => {
                 let wr = (d.wins / d.matches) * 100;
                 if (d.matches >= 5 && wr > battleStats.bestWinRate) {
@@ -994,36 +1006,41 @@ async function startAnalysis() {
         }
         document.getElementById('bestDeckContainer').innerHTML = bestDeckUI;
 
-        // طباعة رادار نقاط الضعف (Nemesis)
-        let nemesisContainer = document.getElementById('nemesisContainer');
-        if (nemesisContainer) {
-            // 🔥 رفعنا العدد لـ 5 بطاقات
-            let sortedNemesis = Object.values(nemesisCards).sort((a, b) => b.count - a.count).slice(0, 5);
-            let nemesisUI = `<h3 style="color:#fca5a5; text-align:center; margin-bottom:15px; font-size: 13px; font-family: 'Inter', sans-serif;"><i class="fa-solid fa-skull-crossbones"></i> Nemesis Radar</h3>`;
+        // طباعة رادار نقاط الضعف (النسخة الشاملة في صفحة مستقلة)
+        let nemesisGrid = document.getElementById('fullNemesisGrid');
+        if (nemesisGrid) {
+            // شلنا الـ slice(0, 5) عشان يعرض كل البطاقات اللي بتحقق الشروط
+            let sortedNemesis = Object.values(nemesisStats)
+                .filter(c => c.encounters >= 3 && c.losses > 0)
+                .map(c => {
+                    c.lossRate = (c.losses / c.encounters) * 100;
+                    return c;
+                })
+                .sort((a, b) => {
+                    if (b.lossRate !== a.lossRate) return b.lossRate - a.lossRate;
+                    return b.encounters - a.encounters;
+                });
 
             if (sortedNemesis.length > 0) {
-                nemesisUI += `<div style="display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin-top:10px;">`;
+                let gridUI = "";
                 sortedNemesis.forEach((c, idx) => {
-                    let isTop = idx === 0;
-                    let height = isTop ? "45px" : "35px";
-                    let color = isTop ? "#ef4444" : "#fca5a5";
-                    // 🔥 حساب النسبة المئوية لظهور البطاقة في خساراتك
-                    let lossPct = totalHistoricalLosses > 0 ? Math.round((c.count / totalHistoricalLosses) * 100) : 0;
+                    let isTop = idx === 0; // تمييز العدو الأول
+                    let borderColor = isTop ? "#ef4444" : "rgba(239, 68, 68, 0.2)";
+                    let textColor = isTop ? "#ef4444" : "#fca5a5";
 
-                    nemesisUI += `<div style="text-align:center; min-width: 50px; background: rgba(239, 68, 68, 0.05); padding: 5px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.1);">
-                        <div style="position:relative; display:inline-block;">
-                            <img src="${c.icon}" style="height:${height}; filter: drop-shadow(0 3px 4px rgba(239, 68, 68, 0.4)); margin-bottom:5px;">
-                            ${isTop ? `<i class="fa-solid fa-crown" style="position:absolute; top:-8px; left:50%; transform:translateX(-50%); color:#ef4444; font-size:10px;"></i>` : ''}
-                        </div>
-                        <div style="color:${color}; font-weight:900; font-size:14px; line-height: 1;">${c.count}</div>
-                        <div style="color:#ef4444; font-size:10px; font-weight:bold; margin-top:4px;">${lossPct}%</div>
+                    gridUI += `<div style="text-align:center; background: rgba(0,0,0,0.4); padding: 15px 10px; border-radius: 8px; border: 1px solid ${borderColor}; position: relative; transition: 0.3s;" class="nemesis-card">
+                        ${isTop ? `<i class="fa-solid fa-crown" style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); color:#ef4444; font-size:16px; drop-shadow(0 0 5px red);"></i>` : ''}
+                        
+                        <img src="${c.icon}" style="height:55px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.8)); margin-bottom:8px;">
+                        
+                        <div style="color:${textColor}; font-weight:900; font-size:18px; line-height: 1;">${c.lossRate.toFixed(0)}%</div>
+                        <div style="color:#a1a1aa; font-size:10px; margin-top:6px; font-weight:bold;">Loss: <span style="color:#ef4444">${c.losses}</span> / ${c.encounters}</div>
                     </div>`;
                 });
-                nemesisUI += `</div><div style="text-align:center; color:#71717a; font-size:10px; margin-top:15px;">Analyzed ${totalHistoricalLosses} losses from ${totalHistoricalMatches} matches</div>`;
+                nemesisGrid.innerHTML = gridUI;
             } else {
-                nemesisUI += `<div style="text-align:center; color:#71717a; margin-top: 40px; font-size:12px;">No losses found in database yet. Keep playing!</div>`;
+                nemesisGrid.innerHTML = `<div style="text-align:center; color:#71717a; grid-column: 1 / -1; padding: 40px; font-size:14px;">Not enough recurring encounters to determine true weaknesses yet. (Database: ${totalHistoricalMatches} matches)</div>`;
             }
-            nemesisContainer.innerHTML = nemesisUI;
         }
 
         renderMainTable();
@@ -1167,9 +1184,3 @@ function renderMainTable() {
     tableHTML += `</tbody>`;
     document.getElementById("mainDataTable").innerHTML = tableHTML;
 }
-// ==========================================
-// 🔥 3. عرض النتائج والميزانية (UI & Enforcer) 🔥
-// ==========================================
-// ==========================================
-// 🔥 3. عرض النتائج والميزانية (UI & Enforcer) 🔥
-// ==========================================
