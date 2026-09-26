@@ -43,6 +43,8 @@
                     Database</button>
                 <button class="tab-btn" onclick="openTab('aiLab')"><i class="fa-solid fa-flask"></i> AI Lab (Full
                     Audit)</button>
+                <button class="tab-btn" style="color: #fca5a5;" onclick="openTab('nemesisTab')"><i
+                        class="fa-solid fa-skull-crossbones"></i> Nemesis Radar</button>
             </div>
 
             <div id="overview" class="tab-content active">
@@ -67,13 +69,6 @@
                         style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 250px;"
                         id="bestDeckContainer">
                         <div style="text-align:center; color:#71717a; font-size:12px;">Waiting for analysis...</div>
-                    </div>
-                    <div class="info-box chart-container"
-                        style="display: flex; flex-direction: column; justify-content: center; min-height: 250px; border: 1px solid rgba(239, 68, 68, 0.2);"
-                        id="nemesisContainer">
-                        <div style="text-align:center; color:#71717a; font-size:12px;"><i
-                                class="fa-solid fa-satellite-dish fa-spin" style="margin-bottom:8px;"></i><br>Scanning
-                            historical weaknesses...</div>
                     </div>
                 </div>
 
@@ -214,6 +209,7 @@
                     <table class="data-table" id="mainDataTable"></table>
                 </div>
             </div>
+
             <!-- 🔥 تبويب المختبر التجريبي للذكاء الاصطناعي 🔥 -->
             <div id="aiLab" class="tab-content">
                 <div
@@ -231,6 +227,23 @@
                     style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
                     <div style="text-align: center; color: var(--text-muted); grid-column: 1 / -1; padding: 40px;">
                         Run the AI Balancer from the Command Center to populate this laboratory.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🔥 تبويب رادار نقاط الضعف 🔥 -->
+            <div id="nemesisTab" class="tab-content">
+                <div
+                    style="background: rgba(0,0,0,0.3); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h2 style="color: #ef4444; margin-top: 0;"><i class="fa-solid fa-database"></i> Full Nemesis
+                        Database</h2>
+                    <p style="color: var(--text-muted); font-size: 13px;">True Loss Rate (%) against opponent cards.
+                        Supportive spells are blacklisted. Requires a minimum of 3 encounters to appear.</p>
+                </div>
+                <div id="fullNemesisGrid"
+                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px;">
+                    <div style="text-align: center; color: var(--text-muted); grid-column: 1 / -1; padding: 40px;">
+                        Run the AI Balancer to load your historical database...
                     </div>
                 </div>
             </div>
